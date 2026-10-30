@@ -1,0 +1,202 @@
+{
+  "elements": {
+    "nodes": [
+      {
+        "data": {
+          "id": "node_victim",
+          "label": "Dr. Rajesh Sharma",
+          "sublabel": "HDFC - XXXX1101",
+          "kind": "bank_account",
+          "risk_tags": [
+            "victim"
+          ],
+          "balance": "\u20b983,970.50",
+          "taint_residual": "\u20b90.00"
+        }
+      },
+      {
+        "data": {
+          "id": "node_mule1",
+          "label": "Ramesh Kumar",
+          "sublabel": "SBI - XXXX6789",
+          "kind": "bank_account",
+          "risk_tags": [
+            "mule_layer1",
+            "rapid_passthrough"
+          ],
+          "balance": "\u20b91,240.00",
+          "taint_residual": "\u20b90.00"
+        }
+      },
+      {
+        "data": {
+          "id": "node_mule2",
+          "label": "Aman Verma",
+          "sublabel": "Axis - XXXX7890",
+          "kind": "bank_account",
+          "risk_tags": [
+            "mule_layer2",
+            "structuring"
+          ],
+          "balance": "\u20b9950.00",
+          "taint_residual": "\u20b9950.00"
+        }
+      },
+      {
+        "data": {
+          "id": "node_mule3",
+          "label": "Pooja Singh",
+          "sublabel": "ICICI - XXXX7890",
+          "kind": "bank_account",
+          "risk_tags": [
+            "mule_layer2",
+            "funds_held"
+          ],
+          "balance": "\u20b940,000.00",
+          "taint_residual": "\u20b940,000.00"
+        }
+      },
+      {
+        "data": {
+          "id": "node_p2p_trader",
+          "label": "Krypton P2P Merchant",
+          "sublabel": "Kotak - XXXX2837",
+          "kind": "exchange",
+          "risk_tags": [
+            "p2p_fiat_onramp"
+          ],
+          "balance": "\u20b949,500.00",
+          "taint_residual": "\u20b90.00"
+        }
+      },
+      {
+        "data": {
+          "id": "node_tron_deposit",
+          "label": "P2P Escrow Deposit",
+          "sublabel": "TYDzsY...AtW6",
+          "kind": "wallet",
+          "rail": "TRON",
+          "risk_tags": [
+            "escrow_wallet"
+          ],
+          "balance": "0.00 USDT",
+          "taint_residual": "0.00 USDT"
+        }
+      },
+      {
+        "data": {
+          "id": "node_tron_consolidator",
+          "label": "Syndicate Consolidation",
+          "sublabel": "TNVaKW...8w7q",
+          "kind": "wallet",
+          "rail": "TRON",
+          "risk_tags": [
+            "peel_chain_head",
+            "critical_freeze_target"
+          ],
+          "balance": "550.00 USDT",
+          "taint_residual": "550.00 USDT"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "data": {
+          "id": "edge_1",
+          "source": "node_victim",
+          "target": "node_mule1",
+          "edge_class": "flow",
+          "label": "confirmed",
+          "amount": "\u20b91,00,000",
+          "rail": "UPI",
+          "ref": "630211982736",
+          "reason": "Corroborated by HDFC debit and SBI credit with matching 12-digit UPI RRN"
+        }
+      },
+      {
+        "data": {
+          "id": "edge_2a",
+          "source": "node_mule1",
+          "target": "node_mule2",
+          "edge_class": "flow",
+          "label": "confirmed",
+          "amount": "\u20b960,000",
+          "rail": "UPI",
+          "ref": "630211983011",
+          "reason": "Rapid pass-through within 5 mins, matching RRN 630211983011"
+        }
+      },
+      {
+        "data": {
+          "id": "edge_2b",
+          "source": "node_mule1",
+          "target": "node_mule3",
+          "edge_class": "flow",
+          "label": "confirmed",
+          "amount": "\u20b940,000",
+          "rail": "UPI",
+          "ref": "630211983088",
+          "reason": "Fan-out transfer within 7 mins, matching RRN 630211983088"
+        }
+      },
+      {
+        "data": {
+          "id": "edge_3_p2p",
+          "source": "node_mule2",
+          "target": "node_p2p_trader",
+          "edge_class": "flow",
+          "label": "confirmed",
+          "amount": "\u20b949,500",
+          "rail": "IMPS",
+          "ref": "IMPS630211991",
+          "reason": "Structured payment just below \u20b950,000 PMLA threshold"
+        }
+      },
+      {
+        "data": {
+          "id": "edge_seam_1",
+          "source": "node_p2p_trader",
+          "target": "node_tron_deposit",
+          "edge_class": "seam",
+          "label": "inferred",
+          "amount": "\u20b949,500 \u2194 550 USDT",
+          "rail": "P2P_BRIDGE",
+          "score": 0.94,
+          "reason": "Bipartite match: \u20b949,500 debit matches 550 USDT credit within 10 mins @ implied rate \u20b990/USDT (0.4% deviation)"
+        }
+      },
+      {
+        "data": {
+          "id": "edge_chain_1",
+          "source": "node_tron_deposit",
+          "target": "node_tron_consolidator",
+          "edge_class": "flow",
+          "label": "confirmed",
+          "amount": "550.00 USDT",
+          "rail": "TRON",
+          "ref": "f183c27a9b0c98d76e4321098efd44211a7890bc...",
+          "reason": "Direct TRC-20 Transfer verified on TRON blockchain"
+        }
+      }
+    ]
+  },
+  "recovery_summary": {
+    "total_lost_inr": "\u20b91,00,000.00",
+    "recoverable_fiat_inr": "\u20b940,000.00 (ICICI Bank - Pooja Singh)",
+    "recoverable_crypto_usdt": "550.00 USDT (Tron Wallet TNVaKW...8w7q)",
+    "action_targets": [
+      {
+        "target": "ICICI Bank",
+        "account": "Pooja Singh (XXXX7890)",
+        "action": "Section 106 BNSS Specific Lien on \u20b940,000.00",
+        "urgency": "High - Undrained Balance"
+      },
+      {
+        "target": "Tether Law Enforcement Liaison / T3 FCU",
+        "wallet": "TNVaKWsmBsZ3rQf59ZpE57P1rYy2PZ8w7q",
+        "action": "Emergency On-Chain USDT Blacklist Request",
+        "urgency": "Critical - Active Peel Chain"
+      }
+    ]
+  }
+}

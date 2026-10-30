@@ -1,0 +1,273 @@
+MANTIS: Blueprint, Stack and Vibe-Coding Playbook
+Team No Bugs Given · Chandigarh University · Prepared 30 October 2026
+MANTIS is a strong idea pitched at the wrong altitude. The deck sells a crypto-tracing feature list. The real gap in India is getting from a complaint to a defensible, actionable money trail before the money is gone, across the bank-mule layer and into USDT. Everything below is built around that. Numbers in square brackets point to the Sources section at the end.
+1. Fix these in the deck first
+The headline stat. Your slide says ₹44 Cr (2025) and ₹46 Cr (2026 so far). National figures are far larger: about 28.15 lakh cases and ₹22,495 crore lost in 2025 [1], and Lok Sabha data shows over ₹55,050 crore reported lost across 2021 to 2025 [2]. The Times of India article could not be located, so it is unclear what geography your numbers cover. If they are a city or state figure, label them that way and lead with the national number. Otherwise judges who know the national figure will discount the whole slide.
+The crypto-only framing. The Indian pattern is fiat first, crypto second. Funds are withdrawn as cash or converted to USDT through Indian P2P exchanges, split into small amounts, and moved across chains such as Ethereum and Tron [3]. A Gwalior case shows the scale: ₹21.05 crore routed through 20,507 mule accounts, with transactions traced through 12 layers [4]. The FIU-IND case of ₹868 crore involved over 5,000 mule accounts and crypto transfers across jurisdictions [5]. The money, not the single complaint, is what exposed that network [5]. Pure on-chain tools cannot see the first half of that trail. Your product should own the seam between bank rails and chains.
+Missing slides. Add architecture, data sources, competition, a measured result, and a demo storyboard.
+2. The problem, redefined
+Investigators do not lack alerts. They lack a trail they can defend and act on inside the freeze window. Speed is where the value sits: the 1930 system reports over ₹11,158 crore saved [2].
+Redefined statement: given one complaint, reconstruct the multi-hop trail across bank rails and blockchains in minutes. Say what is confirmed, inferred, or unknown. Output who to send the freeze or disclosure notice to, with evidence attached.
+Primary user: a state cyber-cell or FIU analyst. Secondary users are bank fraud ops and VASP compliance teams.
+Headline metric: time-to-trail. Trace your demo scenario by hand in a spreadsheet, time it, and show the ratio. A measured number beats any adjective.
+Positioning: complementary to the government stack, not a rival. I4C signed an MoU with the Reserve Bank Innovation Hub in May 2026 to feed its Suspect Registry into AI-driven mule detection [6]. By January 2026 the registry had shared 27.37 lakh Layer-1 mule accounts [7]. That is bank-side detection. MANTIS is trail reconstruction at the investigator’s desk.
+3. Requirements
+Constraints to design in
+Account holder is not the perpetrator. Mule owners are often recruited or duped. Never output “guilty”. Output labelled inferences with reasons, and keep a human decision gate.
+Evidence. Export a hash manifest and chain-of-custody log, designed so a Section 63 BSA 2023 electronic-evidence certificate can be attached. This is an understanding of the law, not legal advice: get a legal read before claiming admissibility.
+Privacy. Use synthetic data only (DPDP Act exposure otherwise).
+4. Competition
+Chainalysis Reactor. The incumbent. One aggregator reports use by 370+ government agencies [8], and it has the deepest attribution database. Weak spots: crypto-only, custom-quoted pricing, attribution asserted by the vendor.
+TRM Labs. Holds FedRAMP High and DoD IL4/IL5 authorization [8]. Strong enterprise and government posture, same crypto-only limit.
+Elliptic. Compliance-first, with cross-chain screening and an AI copilot.
+Crystal Intelligence. Supports 335 blockchains and offers SaaS or on-premise [8]. On-prem matters for Indian data residency, but it is still crypto-only.
+Pricing. Aggregator estimates run from $25K to $500K per year for Elliptic and $50K to $1.4M for TRM [9]. Treat these as unverified. They are still useful for saying “built for enterprise budgets”.
+Indian stack (Suspect Registry, MuleHunter.AI, 1930 system). Bank-side detection and freezing. In this read it does not reconstruct cross-rail trails, but verify that before you claim it.
+Academic work. FlowShield (Aug 2026) argues existing methods do not jointly handle transaction semantics, fund-flow tracking and investigator-facing reports [10]. AMLGuard was evaluated on 82 real laundering cases [11]. This validates your direction. They are papers, not investigator workflows.
+Other hackathon teams. Circular-transfer and rapid-movement detection on graphs is already a standard demo, for example FraudLens [12]. Detectors alone will not set you apart.
+The gap you own
+The fiat-to-chain seam.
+Honest uncertainty with machine-checkable provenance.
+An action output (who to notify, what is still recoverable).
+A deployable on-prem option for state cyber cells. This last one is a business assumption you would need to validate.
+5. Innovations worth building
+Bridge inference. Match a bank debit to a P2P or exchange credit, then to a USDT deposit, using amount, time window and counterparty. Emit ranked candidates with confidence, plus the exact notice to send the platform.
+Typed evidence ledger. Every edge is a claim, a method, evidence transaction IDs, a confidence and any counter-evidence. The UI answers your slide-3 questions: why flagged, what proves it, how sure, what we cannot say.
+Attribution robustness. Run poison, haircut and FIFO taint models. If the conclusion changes by model, say so. Defence counsel will ask.
+Benign-hypothesis test. Check every pattern against innocent explanations (payroll, merchant settlement, exchange hot wallet) and show both sides.
+Freeze queue. Track where the money sits now, ranked by recoverability and time since receipt. This turns analytics into action.
+Grounded narrator. The LLM writes the brief only from structured claims. A validator rejects any sentence whose numbers or IDs are not in the database, and the system falls back to a template.
+Reconciliation-verified PDF ingestion. The LLM extracts statement rows, then a deterministic check (opening balance + credits − debits = closing balance) catches hallucinated rows.
+Evaluation harness. Seeded scenarios with ground truth give trail precision and recall, plus a false-positive rate on a benign scenario. Few teams will show a number.
+6. Feasibility
+TRON works through a free TronGrid or Tronscan key. Etherscan V2 is more fragile than it looks. The free tier allows 5 calls per second and 100,000 per day [14]. Free coverage was reportedly trimmed on some chains, with Base, BNB Chain and OP Mainnet cited [15]. A shared community pool can also run dry for everyone [16]. So cache every response, ship a frozen replay pack, and never depend on live calls on stage.
+7. Core design rule, architecture and data model
+Core design rule: the LLM never computes a fact. The deterministic core does all the math, and the LLM only turns structured claims into readable language. This is the single most defensible thing you can say to a judge.
+Architecture, top to bottom
+Tables (Postgres, append-only for evidence)
+entities: id, kind (account / wallet / exchange / service), label, risk_tags
+transfers: id, rail (UPI / IMPS / NEFT / ETH / TRON), src, dst, asset, amount, ts, ref (UTR or tx hash), source_doc_id, row_hash, ingest_id
+links: src, dst, label (confirmed / inferred / possible / unknown), method, score, evidence_ids, counter_evidence_ids
+episodes: pattern, params (JSONB), tx_ids, confidence, benign_hypotheses
+claims: case_id, structured payload, evidence_ids, confidence, status
+cases, audit_log (hash-chained: each row stores the hash of the previous row)
+8. Algorithm spec
+Every threshold lives in config and appears in the UI next to the finding. Judges trust numbers they can see.
+9. Tech stack (frozen)
+Skip a graph database in the MVP. Kuzu is the trap here: its upstream repo was archived in October 2025 [17], and the community fork Ladybug shipped 0.17.1 in June 2026 [18]. Models with older training data will still suggest Kuzu. Put a GraphStore interface in front of NetworkX so Memgraph, Neo4j or Ladybug can slot in later.
+10. What vibe-coding platforms miss, and the fix
+Prompting protocol for every slice
+One vertical slice per session, with acceptance criteria written first.
+Order of work: write the test, run it and see it fail, write the code, run it and see it pass.
+Ask for a plan before the diff, and keep diffs small.
+Clear the session between slices.
+11. Team and skills
+Four roles cover it. Two-person teams: merge roles 1 and 3, and roles 2 and 4.
+Product and pitch lead: deck v2, demo script, domain research.
+Data and backend: ingest, schema, tracer, taint models, eval harness.
+Detectors and linker: typology rules, scoring, coverage.
+Frontend and UX: case room, graph, replay.
+Skills to cover: FastAPI and SQL (recursive CTEs), graph algorithms, React with Cytoscape, structured-output prompting, data modelling for evidence, pytest and Hypothesis.
+Domain prep tonight: read the FATF red-flag indicators for virtual assets, the structure of UTR references in UPI and IMPS, and how peel chains and mule layering actually look in transaction data.
+12. Build plan
+Percentages are of your total hackathon time, since the duration is not fixed.
+Cut order if you slip: ML second opinion, then PDF ingestion, then animated replay (keep step-through), then the bridge adapter.
+13. Demo storyboard and judge questions
+Three-minute demo
+A complaint arrives with a UTR.
+One click runs the trace and the graph unfolds through the mule layers.
+Detectors fire, each with “why this is unusual”.
+The seam: bridge inference links a bank debit to a USDT deposit.
+Case room: labelled edges, coverage score, named blind spots.
+The freeze queue shows three nodes still holding funds, with notice drafts.
+The benign lookalike stays unflagged.
+Close on your measured time-to-trail (hand trace vs MANTIS).
+Likely questions
+Why not Chainalysis? They are crypto-only and priced for enterprises. We start where Indian cases start, at the bank mule layer, and we output actions, not scores.
+Where is your real data? Bank data is not public, so we built a ground-truth generator. On-chain data is real and cached.
+How accurate is it? Show the eval table, including false positives on the benign case.
+Is it admissible? It produces a hash manifest and chain-of-custody log. A legal review decides admissibility.
+What about false accusations? Labels are explicit, mule owners are not treated as perpetrators, and a human approves every conclusion.
+14. Scale and roadmap
+Technical path. Postgres partitioning, then a columnar store for transfers at volume, in-memory traversal via igraph or Memgraph, and streaming ingest.
+Integrations. NCRP, I4C and bank connectors need government agreements, so present them as a roadmap item, not a feature.
+Cross-institution tracing. Research on financial intelligence units describes an algorithm that starts from known suspicious entities and finds their footprints across institutions without revealing identities [13]. Cite it on a roadmap slide.
+Market. 28.15 lakh complaints in 2025 [1] is the demand signal. Buyers are state cyber cells, I4C, FIU-IND, bank fraud teams, VASPs and forensic firms. Avoid inventing revenue figures.
+15. Gap register
+Eighteen gaps will bite this build, and six of them change the schema, so they are settled in the first phase. Each row carries the design response already decided.
+Rows 1, 2, 6, 7, 8 and 9 touch the schema. Everything else can land later without a migration.
+18. Schema
+Money is integer minor units, time is UTC with a precision flag, and every transfer remembers which rows corroborate it. Paste this into the first migration.
+CREATE TYPE rail AS ENUM ('UPI','IMPS','NEFT','RTGS','CHEQUE','ATM','CASH','ETH','TRON','OTHER');
+CREATE TYPE ts_precision AS ENUM ('exact','minute','date');
+CREATE TYPE link_label AS ENUM ('confirmed','inferred','possible','unknown');
+CREATE TYPE entity_kind AS ENUM ('bank_account','wallet','exchange','service','cash_exit','unknown');
+
+CREATE TABLE cases (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  complaint_ref text,                       -- NCRP acknowledgement no. or FIR no.
+  jurisdiction text,                        -- magistrate court for intimation drafts
+  params jsonb NOT NULL DEFAULT '{}',       -- every threshold and window used
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE documents (                    -- raw uploads, content-addressed
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  sha256 char(64) NOT NULL,
+  filename text, mime text,
+  parser text, parse_status text NOT NULL DEFAULT 'ok',   -- ok | review | failed
+  uploaded_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (case_id, sha256)
+);
+
+CREATE TABLE entities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  kind entity_kind NOT NULL,
+  display text NOT NULL,
+  observed boolean NOT NULL DEFAULT true,   -- false = placeholder for an unseen counterparty
+  risk_tags text[] NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE identifiers (                  -- many per entity, drives entity resolution
+  entity_id uuid NOT NULL REFERENCES entities(id),
+  kind text NOT NULL,                       -- account_no | masked_account | ifsc | vpa | phone | chain_address | name
+  value text NOT NULL,                      -- normalised form
+  raw text,
+  PRIMARY KEY (entity_id, kind, value)
+);
+CREATE INDEX identifiers_lookup ON identifiers (kind, value);
+
+CREATE TABLE transfers (                    -- one row per real-world payment
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  rail rail NOT NULL,
+  src uuid NOT NULL REFERENCES entities(id),
+  dst uuid NOT NULL REFERENCES entities(id),
+  asset text NOT NULL,                      -- INR | USDT-TRC20 | ETH
+  amount_minor numeric(38,0) NOT NULL CHECK (amount_minor > 0),
+  decimals smallint NOT NULL,               -- 2 for INR, 6 for USDT, 18 for ETH
+  ts_utc timestamptz NOT NULL,
+  ts_precision ts_precision NOT NULL,
+  ref text, ref_kind text,                  -- UTR | RRN | tx_hash
+  corroboration smallint NOT NULL DEFAULT 1
+);
+CREATE INDEX transfers_time ON transfers (case_id, ts_utc);
+CREATE INDEX transfers_src ON transfers (case_id, src);
+CREATE INDEX transfers_dst ON transfers (case_id, dst);
+CREATE INDEX transfers_ref ON transfers (ref);
+
+CREATE TABLE transfer_sources (             -- every row that proves a transfer
+  transfer_id uuid NOT NULL REFERENCES transfers(id),
+  document_id uuid REFERENCES documents(id),
+  source_row int,
+  row_hash char(64) NOT NULL,
+  viewpoint text NOT NULL CHECK (viewpoint IN ('payer_statement','payee_statement','chain','complaint')),
+  UNIQUE (document_id, row_hash)
+);
+
+CREATE TABLE links (                        -- labelled relationship between two entities
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  a uuid NOT NULL REFERENCES entities(id),
+  b uuid NOT NULL REFERENCES entities(id),
+  label link_label NOT NULL,
+  method text NOT NULL,
+  score real NOT NULL,
+  evidence jsonb NOT NULL,                  -- [{signal, weight, transfer_ids, identifier}]
+  counter_evidence jsonb NOT NULL DEFAULT '[]',
+  review text CHECK (review IN ('accepted','rejected')),
+  reviewed_by text, reviewed_at timestamptz
+);
+
+CREATE TABLE episodes (                     -- one detected pattern instance
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  pattern text NOT NULL,                    -- fan_out | peel_chain | circular | ...
+  params jsonb NOT NULL,
+  confidence real NOT NULL,
+  benign_hypotheses jsonb NOT NULL DEFAULT '[]'
+);
+CREATE TABLE episode_transfers (
+  episode_id uuid NOT NULL REFERENCES episodes(id),
+  transfer_id uuid NOT NULL REFERENCES transfers(id),
+  role text,
+  PRIMARY KEY (episode_id, transfer_id)
+);
+
+CREATE TABLE claims (                       -- the only thing the narrator may write from
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  kind text NOT NULL,
+  payload jsonb NOT NULL,
+  confidence real,
+  status text NOT NULL DEFAULT 'draft'
+);
+CREATE TABLE claim_evidence (
+  claim_id uuid NOT NULL REFERENCES claims(id),
+  transfer_id uuid REFERENCES transfers(id),
+  link_id uuid REFERENCES links(id),
+  episode_id uuid REFERENCES episodes(id)
+);
+
+CREATE TABLE data_requests (                -- output of the request planner
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  entity_id uuid NOT NULL REFERENCES entities(id),
+  asks text NOT NULL,                       -- statement | KYC | deposit history | issuer freeze
+  period tstzrange,
+  reason text NOT NULL,
+  amount_minor numeric(38,0),               -- the specific amount in question
+  status text NOT NULL DEFAULT 'open'
+);
+
+CREATE TABLE taint_runs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES cases(id),
+  model text NOT NULL,                      -- poison | haircut | fifo
+  tie_policy text NOT NULL,                 -- optimistic | pessimistic
+  params jsonb NOT NULL,
+  code_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE taint_results (
+  run_id uuid NOT NULL REFERENCES taint_runs(id),
+  entity_id uuid NOT NULL REFERENCES entities(id),
+  residual_minor numeric(38,0) NOT NULL,
+  tainted_minor numeric(38,0) NOT NULL,
+  unseen_inflow_minor numeric(38,0) NOT NULL DEFAULT 0,
+  PRIMARY KEY (run_id, entity_id)
+);
+
+CREATE TABLE audit_log (                    -- append-only, hash-chained
+  seq bigserial PRIMARY KEY,
+  case_id uuid NOT NULL REFERENCES cases(id),
+  actor text NOT NULL,
+  action text NOT NULL,
+  payload jsonb NOT NULL,
+  prev_hash char(64) NOT NULL,
+  this_hash char(64) NOT NULL,
+  at timestamptz NOT NULL DEFAULT now()
+);
+transfers holds one row per real-world payment. transfer_sources holds every statement row, chain record or complaint line that proves it. corroboration counts distinct viewpoints (payer statement, payee statement, chain), and two-sided corroboration is what lets an edge be labelled confirmed. unseen_inflow_minor records money that must have arrived from somewhere not yet in the data, which is how gap 1 stays visible instead of silently becoming zero.
+Sources
+The420.in, “Cybercrime Jumps 24% in 2025; Indians Lose ₹22,495 Crore”: https://the420.in/india-cybercrime-24pct-rise-22495cr-loss/
+CyberDefence.org.in, “Cyber Fraud Statistics India 2026” (Lok Sabha data): https://cyberdefence.org.in/blog/cyber-fraud-statistics-india-2026/
+Daily Pioneer, “Cybercrime trail drains Rs 30 cr in 2.5 years in Delhi”: https://www.dailypioneer.com/2025/state-editions/cybercrime-trail-drains-rs-30-cr-in-2-5-years-in-delhi.html
+CA Alley, MP online trading scam with 20,507 mule accounts (reporting The Times of India): https://caalley.com/news-updates/indian-news/mps-biggest-online-trading-scam-20-507-mule-accounts-used-to-launder-rs-21-crore-probe-traces-12-transaction-layers
+FIU-IND ₹868 crore case: https://threatcluster.io/cluster/fiu-ind-uncovers-rs-868-crore-cyber-fraud-receives-internati-5edef2ff and https://southasianherald.com/?p=22501
+All India Radio, I4C and RBIH MoU on mule accounts (12 May 2026): https://newsonair.gov.in/cyber-crime-coordination-sign-mou-with-rbi-to-curtail-mule-accounts/
+NewKerala, BioCatch report on India-based mule accounts (Suspect Registry figures): https://www.newkerala.com/news/a/fraudsters-increasingly-using-india-based-mule-accounts-move-stolen-469.htm
+Spark.money, crypto AML and blockchain forensics tool comparisons: https://www.spark.money/tools/crypto-aml-tool-comparison and https://www.spark.money/tools/blockchain-forensics-tool-comparison
+CostBench, crypto compliance software pricing estimates: https://costbench.com/best/crypto-compliance-for-banks
+FlowShield (arXiv): https://arxiv.org/pdf/2608.17355
+AMLGuard, “Tracing the Shadows” (arXiv): https://arxiv.org/pdf/2607.18869
+FraudLens AI, hackathon project (GitHub): https://github.com/prathmesh79/Hackathon
+“Privacy Technologies for Financial Intelligence” (arXiv): https://arxiv.org/pdf/2408.09935
+Etherscan V2 rate limits: https://docs.etherscan.io/etherscan-v2/rate-limits
+CostBench, Etherscan API hidden costs: https://www.costbench.com/software/onchain-analytics/etherscan-api/hidden-costs/
+Etherscan common error messages: https://docs.etherscan.io/common-error-messages
+FreshPorts, Kuzu port record (upstream archived): https://freshports.org/databases/kuzu
+PuppyGraph, “What is KuzuDB” (Ladybug fork status): https://www.puppygraph.com/blog/what-is-kuzudb

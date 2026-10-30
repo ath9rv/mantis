@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MANTIS | Multi-Rail Financial Intelligence Platform</title>
+  <!-- Tailwind CSS & Cytoscape.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b132b;
+      --card-bg: #1c2541;
+      --accent: #f4d06f;
+      --border: #2a3a5e;
+    }
+    body { background-color: var(--bg); color: #e0e6ed; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    #cy { width: 100%; height: 520px; background-color: #0d1633; border-radius: 0.75rem; }
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #2a3a5e; border-radius: 3px; }
+  </style>
+</head>
+<body class="p-4 md:p-6 custom-scroll">
+
+  <!-- TOP HEADER -->
+  <header class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-[#2a3a5e] pb-4 mb-6 gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-[#f4d06f] flex items-center justify-center text-[#0b132b] font-black text-xl shadow-lg shadow-amber-500/20">M</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl md:text-2xl font-black text-white tracking-wide">MANTIS</h1>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700/50 font-bold uppercase">v2.0 Multi-Rail</span>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 font-bold uppercase">Sec 63 BSA Ready</span>
+        </div>
+        <p class="text-xs text-slate-400">Cross-Rail Financial Crime Trail Reconstruction & Restitution Cockpit</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="bg-[#1c2541] border border-[#2a3a5e] px-3 py-1.5 rounded-lg flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-xs text-slate-300">Active Case: <strong id="active-case-num" class="text-[#f4d06f]">NCRP-2026-8819</strong></span>
+      </div>
+      <button onclick="seedDemoCase()" class="px-3 py-1.5 rounded-lg bg-[#f4d06f] text-[#0b132b] font-bold text-xs hover:bg-[#e5be53] transition shadow">
+        &circlearrowright; Load Demo Case
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN COCKPIT GRID -->
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+    <!-- LEFT COLUMN: Case Stats & Actions (1 Col) -->
+    <div class="space-y-4">
+      
+      <!-- Summary Card -->
+      <div class="p-4 rounded-xl bg-[#1c2541] border border-[#2a3a5e] shadow-sm">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Case Overview</h3>
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div class="p-2.5 rounded bg-[#0b132b] border border-[#2a3a5e]">
+            <div class="text-slate-400 text-[10px]">Total Traced</div>
+            <div class="text-base font-bold text-white mt-0.5" id="stat-total-lost">₹1,00,000</div>
+          </div>
+          <div class="p-2.5 rounded bg-[#0b132b] border border-emerald-900/50">
+            <div class="text-emerald-400 text-[10px]">Recoverable</div>
+            <div class="text-base font-bold text-emerald-300 mt-0.5" id="stat-recoverable">₹40,000</div>
+          </div>
+          <div class="p-2.5 rounded bg-[#0b132b] border border-[#2a3a5e]">
+            <div class="text-slate-400 text-[10px]">Hops Reconstructed</div>
+            <div class="text-base font-bold text-white mt-0.5" id="stat-hops">4 Hops</div>
+          </div>
+          <div class="p-2.5 rounded bg-[#0b132b] border border-amber-900/50">
+            <div class="text-amber-400 text-[10px]">Seam Transitions</div>
+            <div class="text-base font-bold text-amber-300 mt-0.5" id="stat-seams">1 USDT</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ingest Statement Box -->
+      <div class="p-4 rounded-xl bg-[#1c2541] border border-[#2a3a5e]">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dynamic Statement Ingestion</h3>
+        <p class="text-[11px] text-slate-400 mb-3">Upload any bank CSV. The mathematical reconciliation invariant runs automatically.</p>
+        <div class="space-y-2 text-xs">
+          <input type="file" id="statement-upload" class="w-full text-[11px] file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-[#0b132b] file:text-[#f4d06f] hover:file:bg-[#131b33] cursor-pointer">
+          <input type="text" id="statement-owner" placeholder="Account Owner Name (Optional)" class="w-full p-2 rounded bg-[#0b132b] border border-[#2a3a5e] text-xs text-white">
+          <button onclick="uploadStatement()" class="w-full py-2 rounded bg-blue-600 hover:bg-blue-500 font-semibold text-white transition text-xs">
+            Ingest & Reconcile Statement
+          </button>
+        </div>
+        <div id="reconciliation-badge" class="mt-2 text-[11px] hidden p-2 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800"></div>
+      </div>
+
+      <!-- Active Detectors Summary -->
+      <div class="p-4 rounded-xl bg-[#1c2541] border border-[#2a3a5e]">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Detected Typologies</h3>
+        <div id="typologies-list" class="space-y-2 text-xs max-h-48 overflow-y-auto custom-scroll">
+          <div class="p-2 rounded bg-[#0b132b] border border-amber-900/40">
+            <div class="font-bold text-amber-300">Rapid Pass-Through</div>
+            <div class="text-[10px] text-slate-400">Ramesh Kumar (SBI) drained in 5.2m</div>
+          </div>
+          <div class="p-2 rounded bg-[#0b132b] border border-indigo-900/40">
+            <div class="font-bold text-indigo-300">Structuring Under Cap</div>
+            <div class="text-[10px] text-slate-400">Aman Verma (Axis) ₹49,500 P2P buy</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT/CENTER COLUMN: Graph, Tabs & Actions (3 Cols) -->
+    <div class="lg:col-span-3 space-y-4">
+      
+      <!-- View Navigation Tabs -->
+      <div class="flex gap-2 border-b border-[#2a3a5e] pb-2 overflow-x-auto text-xs">
+        <button onclick="setTab('graph')" id="btn-tab-graph" class="px-3.5 py-1.5 rounded-lg font-bold bg-[#f4d06f] text-[#0b132b]">Money Trail Graph</button>
+        <button onclick="setTab('gaps')" id="btn-tab-gaps" class="px-3.5 py-1.5 rounded-lg font-bold text-slate-300 hover:bg-[#1c2541]">Investigation Gap Planner (Sec 94)</button>
+        <button onclick="setTab('recovery')" id="btn-tab-recovery" class="px-3.5 py-1.5 rounded-lg font-bold text-slate-300 hover:bg-[#1c2541]">Recovery Center (Sec 106 Lien)</button>
+        <button onclick="setTab('copilot')" id="btn-tab-copilot" class="px-3.5 py-1.5 rounded-lg font-bold text-slate-300 hover:bg-[#1c2541]">AI Copilot Query</button>
+      </div>
+
+      <!-- TAB 1: GRAPH CANVAS -->
+      <div id="view-graph" class="space-y-3">
+        <div class="relative rounded-xl border border-[#2a3a5e] overflow-hidden">
+          <div id="cy"></div>
+          <!-- Graph Legend -->
+          <div class="absolute bottom-3 left-3 bg-[#0b132b]/90 backdrop-blur p-2.5 rounded-lg border border-[#2a3a5e] text-[10px] space-y-1">
+            <div class="font-bold text-white mb-1 uppercase tracking-wider">Legend</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500"></span> Victim Bank Account</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-amber-500"></span> Layer 1 / 2 Mule Account</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500"></span> P2P Exchange / Escrow</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-cyan-500"></span> TRON Blockchain Wallet</div>
+            <div class="flex items-center gap-2"><span class="w-4 h-0.5 bg-amber-400"></span> Seam Match Edge</div>
+          </div>
+        </div>
+
+        <!-- Node Details Drawer -->
+        <div id="node-inspector" class="p-3 rounded-xl bg-[#1c2541] border border-[#2a3a5e] text-xs flex items-center justify-between">
+          <div>
+            <span class="text-slate-400 text-[10px] uppercase font-bold">Selected Node:</span>
+            <span id="inspect-label" class="font-bold text-white ml-2">Click any node or edge to inspect</span>
+          </div>
+          <div id="inspect-action" class="text-right text-slate-400 text-[11px]"></div>
+        </div>
+      </div>
+
+      <!-- TAB 2: INVESTIGATION GAP PLANNER -->
+      <div id="view-gaps" class="hidden p-5 rounded-xl bg-[#1c2541] border border-[#2a3a5e] space-y-4">
+        <div>
+          <h3 class="text-sm font-bold text-white uppercase">Investigation Gap Planner & Custody Boundaries</h3>
+          <p class="text-xs text-slate-400">Identifies where the money trail enters private exchanges and drafts Section 94 BNSS (Sec 91 CrPC) notices.</p>
+        </div>
+        <div class="p-4 rounded-lg bg-[#0b132b] border border-amber-900/50 text-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-300 text-sm">Custody Boundary: Krypton P2P Merchant Escrow</span>
+            <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 font-mono text-[10px] border border-rose-800">Unresolved: ₹49,500.00</span>
+          </div>
+          <p class="text-slate-300 text-xs">
+            Funds transitioned from Axis Bank into an off-chain P2P escrow account. Internal customer trading ledgers, KYC dossiers, and downstream withdrawal addresses are required.
+          </p>
+          <div class="bg-black/40 p-3 rounded font-mono text-[11px] text-slate-300 max-h-48 overflow-y-auto custom-scroll border border-[#2a3a5e]" id="sec94-notice-preview">
+NOTICE UNDER SECTION 94 OF BHARATIYA NAGARIK SURAKSHA SANHITA (BNSS), 2023
+To: Compliance Officer, Krypton P2P Escrow Exchange
+Subject: Production of Documents in Case Ref: NCRP-2026-8819
+
+Whereas proceeds of cyber fraud aggregating to ₹49,500.00 arrived at your order reference on 28-Oct-2026.
+You are hereby directed to produce forthwith:
+1. Verified e-KYC dossier of the trading counterparty.
+2. Complete internal deposit ledger and order book matched counterparty details.
+3. Destination TRON blockchain addresses and TxIDs for all subsequent withdrawals.
+          </div>
+          <button onclick="alert('Notice Downloaded for Investigating Officer Signature')" class="px-4 py-2 rounded bg-[#f4d06f] text-[#0b132b] font-bold text-xs hover:bg-[#e5be53]">
+            &darr; Export Signed Notice PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 3: RECOVERY MANAGEMENT CENTER -->
+      <div id="view-recovery" class="hidden p-5 rounded-xl bg-[#1c2541] border border-[#2a3a5e] space-y-4">
+        <div>
+          <h3 class="text-sm font-bold text-white uppercase">Recovery Management Center</h3>
+          <p class="text-xs text-slate-400">Court-admissible lien calculations compliant with Rajasthan HC (Shree Balaji Enterprises, 2026).</p>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-[#2a3a5e]">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[#0b132b] text-slate-400 uppercase text-[10px]">
+              <tr>
+                <th class="p-3">Target Institution</th>
+                <th class="p-3">Account / Wallet</th>
+                <th class="p-3">Disputed Lien</th>
+                <th class="p-3">Score</th>
+                <th class="p-3">Statutory Basis</th>
+                <th class="p-3">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#2a3a5e] text-slate-300">
+              <tr class="hover:bg-[#131b33]">
+                <td class="p-3 font-semibold text-white">ICICI Bank</td>
+                <td class="p-3">Pooja Singh (XXXX7890)</td>
+                <td class="p-3 font-bold text-emerald-400">₹40,000.00</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">0.92 (Critical)</span></td>
+                <td class="p-3 text-[11px]">Sec 106 BNSS Specific Lien</td>
+                <td class="p-3"><button onclick="alert('Section 106 BNSS Specific Lien Notice Generated for ICICI Bank')" class="px-2.5 py-1 rounded bg-blue-600 text-white font-semibold text-[10px]">Generate Lien</button></td>
+              </tr>
+              <tr class="hover:bg-[#131b33]">
+                <td class="p-3 font-semibold text-white">Tether T3 FCU</td>
+                <td class="p-3 font-mono text-[10px]">TNVaKWsmBsZ3rQf59ZpE...</td>
+                <td class="p-3 font-bold text-cyan-400">550.00 USDT</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">0.85 (High)</span></td>
+                <td class="p-3 text-[11px]">Emergency Blacklist Request</td>
+                <td class="p-3"><button onclick="alert('USDT Blacklist Request Generated for Tether Law Enforcement Liaison')" class="px-2.5 py-1 rounded bg-blue-600 text-white font-semibold text-[10px]">Requisition</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: AI INVESTIGATION COPILOT -->
+      <div id="view-copilot" class="hidden p-5 rounded-xl bg-[#1c2541] border border-[#2a3a5e] space-y-4">
+        <div>
+          <h3 class="text-sm font-bold text-white uppercase">AI Investigation Copilot (Evidence-First)</h3>
+          <p class="text-xs text-slate-400">Strictly grounded in verified database transactions. No hallucinations.</p>
+        </div>
+        <div id="copilot-chat" class="p-4 rounded-lg bg-[#0b132b] border border-[#2a3a5e] h-64 overflow-y-auto custom-scroll space-y-3 text-xs">
+          <div class="p-3 rounded bg-[#1c2541] text-slate-300 border border-[#2a3a5e]">
+            <strong>MANTIS Copilot:</strong> I am connected to the Case NCRP-2026-8819 database. You can ask me to trace amounts, check time windows, inspect typology evidence, or query missing information.
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="copilot-input" placeholder="e.g., What are the 3 largest transactions in this trail?" class="flex-1 p-2.5 rounded bg-[#0b132b] border border-[#2a3a5e] text-xs text-white">
+          <button onclick="askCopilot()" class="px-4 py-2 rounded bg-[#f4d06f] text-[#0b132b] font-bold text-xs hover:bg-[#e5be53]">
+            Ask Copilot
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Cytoscape initialization
+    let cy = null;
+
+    const DEMO_ELEMENTS = {
+      nodes: [
+        { data: { id: "victim", label: "Dr. Rajesh Sharma\n(Victim)", kind: "victim", balance: "₹83,970.50" } },
+        { data: { id: "mule1", label: "Ramesh Kumar\n(Layer 1 Mule)", kind: "mule", balance: "₹1,240.00" } },
+        { data: { id: "mule2", label: "Aman Verma\n(Layer 2 Mule A)", kind: "mule", balance: "₹950.00" } },
+        { data: { id: "mule3", label: "Pooja Singh\n(Layer 2 Mule B)", kind: "mule", balance: "₹40,000.00" } },
+        { data: { id: "p2p", label: "Krypton P2P\n(Escrow Desk)", kind: "exchange", balance: "₹49,500.00" } },
+        { data: { id: "tron_escrow", label: "P2P Escrow Wallet\n(TYDzsY...)", kind: "wallet", balance: "0 USDT" } },
+        { data: { id: "tron_cons", label: "Syndicate Head\n(TNVaKW...)", kind: "wallet", balance: "550 USDT" } }
+      ],
+      edges: [
+        { data: { id: "e1", source: "victim", target: "mule1", label: "₹1,00,000 (UPI)", edge_class: "flow" } },
+        { data: { id: "e2a", source: "mule1", target: "mule2", label: "₹60,000 (UPI)", edge_class: "flow" } },
+        { data: { id: "e2b", source: "mule1", target: "mule3", label: "₹40,000 (UPI)", edge_class: "flow" } },
+        { data: { id: "e3", source: "mule2", target: "p2p", label: "₹49,500 (IMPS)", edge_class: "flow" } },
+        { data: { id: "seam1", source: "p2p", target: "tron_escrow", label: "₹49.5k ↔ 550 USDT", edge_class: "seam" } },
+        { data: { id: "e4", source: "tron_escrow", target: "tron_cons", label: "550 USDT (TRC20)", edge_class: "flow" } }
+      ]
+    };
+
+    function initCytoscape(elements) {
+      cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: elements,
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'color': '#fff',
+              'font-size': '10px',
+              'font-weight': 'bold',
+              'text-wrap': 'wrap',
+              'width': 85,
+              'height': 50,
+              'shape': 'roundrectangle',
+              'border-width': 2,
+              'border-color': '#2a3a5e'
+            }
+          },
+          {
+            selector: 'node[kind="victim"]',
+            style: { 'background-color': '#059669', 'border-color': '#34d399' }
+          },
+          {
+            selector: 'node[kind="mule"]',
+            style: { 'background-color': '#d97706', 'border-color': '#fbbf24' }
+          },
+          {
+            selector: 'node[kind="exchange"]',
+            style: { 'background-color': '#7c3aed', 'border-color': '#a78bfa' }
+          },
+          {
+            selector: 'node[kind="wallet"]',
+            style: { 'background-color': '#0891b2', 'border-color': '#22d3ee' }
+          },
+          {
+            selector: 'edge[edge_class="flow"]',
+            style: {
+              'width': 2.5,
+              'line-color': '#3b82f6',
+              'target-arrow-color': '#3b82f6',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'label': 'data(label)',
+              'font-size': '9px',
+              'color': '#93c5fd',
+              'text-background-color': '#0b132b',
+              'text-background-opacity': 0.8
+            }
+          },
+          {
+            selector: 'edge[edge_class="seam"]',
+            style: {
+              'width': 3.5,
+              'line-color': '#f4d06f',
+              'line-style': 'dashed',
+              'target-arrow-color': '#f4d06f',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'label': 'data(label)',
+              'font-size': '9px',
+              'color': '#f4d06f',
+              'text-background-color': '#0b132b',
+              'text-background-opacity': 0.8
+            }
+          }
+        ],
+        layout: {
+          name: 'breadthfirst',
+          directed: true,
+          padding: 30,
+          spacingFactor: 1.25
+        }
+      });
+
+      cy.on('tap', 'node', function(evt){
+        var node = evt.target;
+        document.getElementById('inspect-label').innerText = node.data('label').replace('\n', ' - ') + " | Balance: " + node.data('balance');
+      });
+    }
+
+    function setTab(tabName) {
+      ['graph', 'gaps', 'recovery', 'copilot'].forEach(t => {
+        document.getElementById('view-' + t).classList.add('hidden');
+        document.getElementById('btn-tab-' + t).classList.remove('bg-[#f4d06f]', 'text-[#0b132b]');
+        document.getElementById('btn-tab-' + t).classList.add('text-slate-300');
+      });
+      document.getElementById('view-' + tabName).classList.remove('hidden');
+      document.getElementById('btn-tab-' + tabName).classList.add('bg-[#f4d06f]', 'text-[#0b132b]');
+      document.getElementById('btn-tab-' + tabName).classList.remove('text-slate-300');
+      if (tabName === 'graph' && cy) {
+        cy.resize();
+        cy.fit();
+      }
+    }
+
+    function seedDemoCase() {
+      initCytoscape(DEMO_ELEMENTS);
+      alert("Scenario 1 Loaded: 4 Hops reconstructed from HDFC UPI -> SBI/Axis Mule -> TRON USDT");
+    }
+
+    function askCopilot() {
+      const q = document.getElementById('copilot-input').value;
+      if (!q) return;
+      const chat = document.getElementById('copilot-chat');
+      chat.innerHTML += `<div class="p-2.5 rounded bg-blue-950/40 text-blue-200 border border-blue-900"><strong>Investigator:</strong> ${q}</div>`;
+      
+      // Deterministic answer simulation matching backend API
+      let ans = "Analysis completed across corroborated records.";
+      if (q.includes("largest") || q.includes("top")) {
+        ans = "The 3 largest movements: 550.00 USDT via TRON (Ref: f183c27a...); ₹1,00,000.00 via UPI (Ref: 630211982736); ₹60,000.00 via UPI (Ref: 630211983011).";
+      } else if (q.includes("missing") || q.includes("gap") || q.includes("required")) {
+        ans = "Custody Boundary at 'Krypton P2P Escrow'. Unresolved: ₹49,500.00. Requisition required under Section 94 BNSS 2023 for internal orderbook and KYC.";
+      } else if (q.includes("pattern") || q.includes("suspicious")) {
+        ans = "Detected 2 typologies: 'Rapid Pass-Through' at Ramesh Kumar (SBI, dwell 5.2m) and 'Structuring' at Aman Verma (Axis, ₹49,500).";
+      } else if (q.includes("crypto") || q.includes("usdt")) {
+        ans = "Cross-rail seam identified: ₹49,500 IMPS debit matched with 550.00 USDT credit within 20m @ implied rate ₹90.0/USDT (0.0% market deviation).";
+      }
+
+      chat.innerHTML += `<div class="p-2.5 rounded bg-[#1c2541] text-slate-300 border border-[#2a3a5e]"><strong>MANTIS Copilot:</strong> ${ans}</div>`;
+      document.getElementById('copilot-input').value = '';
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Initialize Cytoscape on load
+    window.onload = function() {
+      initCytoscape(DEMO_ELEMENTS);
+    };
+  </script>
+</body>
+</html>
