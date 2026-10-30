@@ -7,6 +7,7 @@ probabilistic links, custody boundaries, and investigation gap requests.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from typing import List, Dict, Any, Optional
 
@@ -72,8 +73,7 @@ class CanonicalTransaction:
 
     @property
     def amount_formatted(self) -> str:
-        factor = 10 ** self.decimals
-        val = self.amount_minor / factor
+        val = Decimal(self.amount_minor) / (Decimal(10) ** self.decimals)
         if self.asset == "INR":
             return f"₹{val:,.2f}"
         return f"{val:,.{min(self.decimals, 4)}f} {self.asset}"

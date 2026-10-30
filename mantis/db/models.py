@@ -31,6 +31,7 @@ class CaseDB(Base):
 
 class DocumentDB(Base):
     __tablename__ = "documents"
+    __table_args__ = (Index("ix_documents_case_hash", "case_id", "sha256"),)
 
     id = Column(String(64), primary_key=True, default=lambda: f"doc_{uuid.uuid4().hex[:12]}")
     case_id = Column(String(64), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
@@ -59,6 +60,7 @@ class StatementReconciliationDB(Base):
 
 class EntityDB(Base):
     __tablename__ = "entities"
+    __table_args__ = (Index("ix_entities_case_display", "case_id", "display"),)
 
     id = Column(String(64), primary_key=True)
     case_id = Column(String(64), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
@@ -73,6 +75,10 @@ class EntityDB(Base):
 
 class TransferDB(Base):
     __tablename__ = "transfers"
+    __table_args__ = (
+        Index("ix_transfers_case_time", "case_id", "ts_utc", "id"),
+        Index("ix_transfers_case_reference", "case_id", "ref"),
+    )
 
     id = Column(String(64), primary_key=True)
     case_id = Column(String(64), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
@@ -94,6 +100,7 @@ class TransferDB(Base):
 
 class SeamMatchDB(Base):
     __tablename__ = "seam_matches"
+    __table_args__ = (Index("ix_seam_matches_case", "case_id"),)
 
     id = Column(String(64), primary_key=True)
     case_id = Column(String(64), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
@@ -112,6 +119,7 @@ class SeamMatchDB(Base):
 
 class EpisodeDB(Base):
     __tablename__ = "episodes"
+    __table_args__ = (Index("ix_episodes_case_pattern", "case_id", "pattern"),)
 
     id = Column(String(64), primary_key=True, default=lambda: f"ep_{uuid.uuid4().hex[:12]}")
     case_id = Column(String(64), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
@@ -124,6 +132,7 @@ class EpisodeDB(Base):
 
 class InvestigationDataRequestDB(Base):
     __tablename__ = "investigation_data_requests"
+    __table_args__ = (Index("ix_data_requests_case", "case_id"),)
 
     id = Column(String(64), primary_key=True)
     case_id = Column(String(64), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False)
@@ -139,6 +148,7 @@ class InvestigationDataRequestDB(Base):
 
 class AuditLogDB(Base):
     __tablename__ = "audit_log"
+    __table_args__ = (Index("ix_audit_case_sequence", "case_id", "seq"),)
 
     seq = Column(Integer, primary_key=True, autoincrement=True)
     case_id = Column(String(64), nullable=False)
@@ -148,3 +158,13 @@ class AuditLogDB(Base):
     prev_hash = Column(String(64), nullable=False)
     this_hash = Column(String(64), nullable=False)
     at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class TraceRunDB(Base):
+    __tablename__ = "trace_runs"
+    __table_args__ = (Index("ix_trace_runs_case_created", "case_id", "created_at"),)
+
+    id = Column(String(64), primary_key=True, default=lambda: f"trace_{uuid.uuid4().hex[:16]}")
+    case_id = Column(String(64), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    seed_transfer_id = Column(String(64), nullable=False)
+    result_json = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

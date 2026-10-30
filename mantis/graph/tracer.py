@@ -54,7 +54,8 @@ class MultiStrategyTracer:
             tx_by_src[src].sort(key=lambda t: t.ts_utc)
 
         visited_tx_ids: Set[str] = {seed_tx.id}
-        queue = deque([(seed_tx.dst_id, seed_tx.ts_utc, seed_tx.amount_minor, 1)])
+        queue = deque([(seed_tx.dst_id, seed_tx.ts_utc, seed_tx.amount_minor, seed_tx.asset, 1)])
+        max_hop_depth = 0
 
         traced_edges: List[FlowEdge] = [
             FlowEdge(
@@ -62,20 +63,25 @@ class MultiStrategyTracer:
                 source=seed_tx.src_id,
                 target=seed_tx.dst_id,
                 transfer=seed_tx,
-                label=LinkLabel.CONFIRMED,
+                label=LinkLabel.CONFIRMED if seed_tx.corroboration > 1 else LinkLabel.INFERRED,
                 evidence_reason="Seed complaint transaction"
             )
         ]
         traced_node_ids: Set[str] = {seed_tx.src_id, seed_tx.dst_id}
 
         while queue:
-            curr_entity, curr_time, parent_amount, hop = queue.popleft()
+            curr_entity, curr_time, parent_amount, curr_asset, hop = queue.popleft()
             if hop > self.config.hop_cap:
                 continue
 
             outflows = tx_by_src.get(curr_entity, [])
             for tx in outflows:
                 if tx.id in visited_tx_ids:
+                    continue
+
+                # Amounts in different assets cannot be followed as one flow; cross-asset
+                # relationships belong in the separate seam-matching layer.
+                if tx.asset != curr_asset:
                     continue
 
                 # Time-monotonicity check
@@ -93,6 +99,7 @@ class MultiStrategyTracer:
 
                 visited_tx_ids.add(tx.id)
                 traced_node_ids.add(tx.dst_id)
+                max_hop_depth = max(max_hop_depth, hop)
 
                 dwell_minutes = round(window_sec / 60.0, 1)
                 edge_label = LinkLabel.CONFIRMED if tx.corroboration > 1 else LinkLabel.INFERRED
@@ -105,14 +112,14 @@ class MultiStrategyTracer:
                     evidence_reason=f"Hop {hop}: Transferred after {dwell_minutes}m dwell time (Ref: {tx.ref or 'N/A'})"
                 ))
 
-                queue.append((tx.dst_id, tx.ts_utc, tx.amount_minor, hop + 1))
+                queue.append((tx.dst_id, tx.ts_utc, tx.amount_minor, tx.asset, hop + 1))
 
         return {
             "strategy": "forward",
             "seed_id": seed_tx.id,
             "nodes": list(traced_node_ids),
             "edges": traced_edges,
-            "hop_depth": max((e.transfer.corroboration for e in traced_edges), default=1)
+            "hop_depth": max_hop_depth
         }
 
     def trace_convergence(self, complaint_txs: List[CanonicalTransaction],

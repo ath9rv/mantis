@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Tuple, Optional
 import hashlib
 import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timezone
 from mantis.core.models import CanonicalTransaction, Rail
 
@@ -35,17 +36,21 @@ class BaseStatementAdapter(ABC):
 
     @staticmethod
     def parse_amount_to_minor(val_str: Any, decimals: int = 2) -> int:
-        """Converts strings like '1,50,000.50' or '₹49,500' into integer minor units (paise)."""
-        if val_str is None or val_str == "":
+        """Convert a financial amount to integer minor units without float rounding."""
+        if val_str is None or str(val_str).strip() == "":
             return 0
-        cleaned = re.sub(r"[^\d.-]", "", str(val_str)).strip()
+        cleaned = re.sub(r"[^\d,().+-]", "", str(val_str)).strip().replace(",", "")
         if not cleaned:
-            return 0
+            raise ValueError(f"Invalid amount: {val_str!r}")
+        if cleaned.startswith("(") and cleaned.endswith(")"):
+            cleaned = "-" + cleaned[1:-1]
         try:
-            val_float = float(cleaned)
-            return int(round(val_float * (10 ** decimals)))
-        except ValueError:
-            return 0
+            value = Decimal(cleaned)
+            if not value.is_finite():
+                raise InvalidOperation
+            return int((value * (10 ** decimals)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        except (InvalidOperation, ValueError) as exc:
+            raise ValueError(f"Invalid amount: {val_str!r}") from exc
 
     @staticmethod
     def extract_upi_rrn(text: str) -> Optional[str]:
@@ -72,6 +77,8 @@ class BaseStatementAdapter(ABC):
         Returns (parsed_utc_datetime, precision: 'exact'|'minute'|'date').
         """
         date_str = str(date_str).strip()
+        if not date_str:
+            raise ValueError("Transaction date is empty")
         from datetime import timedelta
         ist_tz = timezone(timedelta(hours=default_tz_offset_hours))
 
@@ -95,5 +102,12 @@ class BaseStatementAdapter(ABC):
                 return dt_localized.astimezone(timezone.utc), prec
             except ValueError:
                 continue
-        # Default fallback to now with 'date' precision
-        return datetime.now(timezone.utc), "date"
+        # ISO timestamps may include an explicit UTC offset or Z suffix.
+        try:
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=ist_tz)
+            precision = "exact" if "." in date_str or re.search(r"\d{2}:\d{2}:\d{2}", date_str) else "minute"
+            return dt.astimezone(timezone.utc), precision
+        except ValueError as exc:
+            raise ValueError(f"Unsupported transaction date: {date_str!r}") from exc

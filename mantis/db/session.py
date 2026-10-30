@@ -1,7 +1,7 @@
 """
 MANTIS Database Session & Engine Configuration
-Supports SQLite (zero-config local hackathon development) and PostgreSQL (production).
-Enables WAL mode on SQLite for high-concurrency read/write operations.
+Supports SQLite for a local workspace and PostgreSQL when configured.
+Enables WAL mode on SQLite for concurrent local reads and writes.
 """
 
 import os
@@ -37,5 +37,8 @@ def get_db():
         db.close()
 
 def init_db():
-    """Initializes all database tables."""
+    """Create missing tables and add non-destructive query indexes."""
     Base.metadata.create_all(bind=engine)
+    for table in Base.metadata.tables.values():
+        for index in table.indexes:
+            index.create(bind=engine, checkfirst=True)

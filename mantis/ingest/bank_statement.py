@@ -32,7 +32,7 @@ class DynamicBankStatementAdapter(BaseStatementAdapter):
         self.account_owner_id = account_owner_id or f"entity_{uuid.uuid4().hex[:8]}"
 
     def parse(self) -> Tuple[List[CanonicalTransaction], Dict[str, Any]]:
-        text_stream = io.StringIO(self.raw_bytes.decode("utf-8", errors="replace"))
+        text_stream = io.StringIO(self.raw_bytes.decode("utf-8-sig", errors="strict"))
         reader = csv.reader(text_stream)
         
         headers = []
@@ -66,7 +66,10 @@ class DynamicBankStatementAdapter(BaseStatementAdapter):
         closing_balance: Optional[int] = None
 
         for row_idx, row in enumerate(reader):
-            if not row or len(row) <= max(filter(lambda x: x is not None, [idx_date, idx_desc])):
+            if not row or all(not cell.strip() for cell in row):
+                continue
+            required_indices = [idx for idx in (idx_date, idx_desc) if idx is not None]
+            if not required_indices or len(row) <= max(required_indices):
                 continue
 
             # Extract fields
@@ -80,6 +83,9 @@ class DynamicBankStatementAdapter(BaseStatementAdapter):
             # Check if this row is an explicit Opening Balance record
             if "opening balance" in desc_raw.lower() or "b/f" in desc_raw.lower():
                 opening_balance = self.parse_amount_to_minor(bal_raw or cr_raw or dr_raw)
+                continue
+
+            if not date_raw.strip():
                 continue
 
             dt_utc, precision = self.parse_datetime_flexible(date_raw)
@@ -110,16 +116,24 @@ class DynamicBankStatementAdapter(BaseStatementAdapter):
 
             # Extract 12-digit UTR / RRN
             rrn = self.extract_upi_rrn(f"{ref_raw} {desc_raw}")
+            # Only a stable payment reference is safe to reuse as an entity key.
+            # Narration text is not an identity signal: recurring text such as
+            # "UPI PAYMENT" can describe unrelated counterparties.
+            counterparty_key = rrn or f"{self.document_id}:{reader.line_num}"
+            counterparty_id = f"cp_{uuid.uuid5(uuid.NAMESPACE_DNS, self.case_id + ':' + counterparty_key).hex[:12]}"
 
             # Collect unmapped columns for lossless audit
             unmapped = {}
             for col_i, col_val in enumerate(row):
                 if col_i not in [idx_date, idx_desc, idx_ref, idx_dr, idx_cr, idx_bal] and col_i < len(raw_headers):
                     unmapped[raw_headers[col_i].strip()] = col_val.strip()
+            unmapped["__source_row_number"] = reader.line_num
+            unmapped["__source_row"] = row
+            unmapped["__source_headers"] = raw_headers
 
             if dr_minor > 0:
                 total_debits += dr_minor
-                dest_counterparty_id = f"cp_{uuid.uuid5(uuid.NAMESPACE_DNS, desc_raw).hex[:8]}"
+                dest_counterparty_id = counterparty_id
                 tx = CanonicalTransaction(
                     id=f"tx_{uuid.uuid4().hex[:12]}",
                     case_id=self.case_id,
@@ -140,7 +154,7 @@ class DynamicBankStatementAdapter(BaseStatementAdapter):
 
             if cr_minor > 0:
                 total_credits += cr_minor
-                src_counterparty_id = f"cp_{uuid.uuid5(uuid.NAMESPACE_DNS, desc_raw).hex[:8]}"
+                src_counterparty_id = counterparty_id
                 tx = CanonicalTransaction(
                     id=f"tx_{uuid.uuid4().hex[:12]}",
                     case_id=self.case_id,

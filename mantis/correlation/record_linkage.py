@@ -1,9 +1,4 @@
-"""
-MANTIS Probabilistic Record Linkage Engine
-Implements the Fellegi-Sunter methodology (the mathematical foundation of Splink).
-Evaluates whether records from different datasets (Bank Statements, P2P Orderbooks,
-Exchange KYC, Complaints) refer to the same entity or transaction.
-"""
+"""Candidate record comparison with transparent, uncalibrated review weights."""
 
 import math
 import re
@@ -16,6 +11,10 @@ class ComparisonRule:
     field_name: str
     m_probability: float  # P(agree | Match)
     u_probability: float  # P(agree | Non-Match)
+
+    def __post_init__(self):
+        if not 0.0 < self.m_probability < 1.0 or not 0.0 < self.u_probability < 1.0:
+            raise ValueError("m_probability and u_probability must be strictly between 0 and 1")
     
     @property
     def weight_agreement(self) -> float:
@@ -27,27 +26,31 @@ class ComparisonRule:
 
 class FellegiSunterLinker:
     """
-    Probabilistic entity and record linkage engine.
-    Calculates log-likelihood ratios across multiple comparison fields
-    and outputs calibrated probabilities and supporting/counter-evidence.
+    Transparent record-pair ranking using illustrative Fellegi-Sunter-style weights.
+
+    The default m/u values are hand-set and have not been estimated from labeled data.
+    Scores are for prioritizing manual review; they are not calibrated probabilities
+    and can never establish a confirmed identity.
     """
 
     DEFAULT_RULES = [
-        ComparisonRule("account_number_suffix", m_probability=0.98, u_probability=0.0001), # Last 4 digits + bank IFSC
+        ComparisonRule("account_number_suffix", m_probability=0.98, u_probability=0.0001), # Last-four account suffix only
         ComparisonRule("vpa_handle", m_probability=0.95, u_probability=0.0005),            # Exact or fuzzy UPI VPA
         ComparisonRule("phone_number", m_probability=0.92, u_probability=0.0001),          # Mobile phone link
-        ComparisonRule("name_jaro_winkler", m_probability=0.85, u_probability=0.02),       # Transliterated Indian names
+        ComparisonRule("name_token_jaccard", m_probability=0.85, u_probability=0.02),      # Token overlap; not Jaro-Winkler
         ComparisonRule("time_proximity_window", m_probability=0.90, u_probability=0.05),   # Occurs within 15 mins
     ]
 
     def __init__(self, rules: List[ComparisonRule] = None, prior_match_prob: float = 0.01):
+        if not 0.0 < prior_match_prob < 1.0:
+            raise ValueError("prior_match_prob must be strictly between 0 and 1")
         self.rules = rules or self.DEFAULT_RULES
         self.prior_odds = prior_match_prob / (1.0 - prior_match_prob)
 
     def compare_records(self, rec_a: Dict[str, Any], rec_b: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Compares two records across configured fields.
-        Returns total weight, match probability, and itemized evidence/counter-evidence.
+        Compare records across configured fields and return review weight plus signals.
+        The default m/u assumptions are illustrative and are not a calibrated model.
         """
         log_weight_sum = math.log2(self.prior_odds)
         evidence = []
@@ -83,22 +86,13 @@ class FellegiSunterLinker:
                     "detail": detail
                 })
 
-        # Convert posterior odds to probability: P = Odds / (1 + Odds) = 1 / (1 + 2^(-log_odds))
-        posterior_prob = 1.0 / (1.0 + (2.0 ** (-log_weight_sum)))
-
-        # Determine label
-        if posterior_prob >= 0.95:
-            label = LinkLabel.CONFIRMED if any(e["field"] == "account_number_suffix" for e in evidence) else LinkLabel.INFERRED
-        elif posterior_prob >= 0.70:
-            label = LinkLabel.INFERRED
-        elif posterior_prob >= 0.40:
-            label = LinkLabel.POSSIBLE
-        else:
-            label = LinkLabel.UNKNOWN
+        # Keep the log-weight for ranking rather than applying a sigmoid that
+        # could be mistaken for a calibrated probability.
+        label = LinkLabel.POSSIBLE if evidence else LinkLabel.UNKNOWN
 
         return {
-            "match_probability": round(posterior_prob, 4),
-            "log_weight": round(log_weight_sum, 2),
+            "review_rank_weight": round(log_weight_sum, 2),
+            "calibration": "uncalibrated_review_rank_only",
             "label": label,
             "evidence": evidence,
             "counter_evidence": counter_evidence

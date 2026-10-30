@@ -38,6 +38,10 @@ class RapidPassThroughDetector(BaseDetector):
             outflows.setdefault(tx.src_id, []).append(tx)
 
         for entity_id in set(inflows.keys()).intersection(set(outflows.keys())):
+            # Adapter-generated cp_* nodes stand for a transaction/reference pairing,
+            # not a verified account that can meaningfully be labeled a pass-through.
+            if entity_id.startswith("cp_"):
+                continue
             for in_tx in inflows[entity_id]:
                 for out_tx in outflows[entity_id]:
                     if out_tx.ts_utc < in_tx.ts_utc:
@@ -81,6 +85,8 @@ class FanOutDetector(BaseDetector):
             outflows_by_src.setdefault(tx.src_id, []).append(tx)
 
         for src_id, txs in outflows_by_src.items():
+            if src_id.startswith("cp_"):
+                continue
             if len(txs) < self.config.fan_out_min_degree:
                 continue
             # Check time span of outflows

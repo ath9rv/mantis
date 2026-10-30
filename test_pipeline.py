@@ -2,7 +2,7 @@
 MANTIS End-to-End Dynamic Intelligence Pipeline Test
 Tests:
 1. Dynamic Ingestion & Invariant Reconciliation across multiple bank CSVs
-2. Probabilistic Record Linkage (Fellegi-Sunter / Splink)
+2. Uncalibrated Record-Pair Review Ranking
 3. Multi-Rail Constrained Seam Matching (Fiat Debit <-> Crypto Credit)
 4. Time-Monotonic Graph Tracing & 3 Taint Models (Poison, Haircut, FIFO)
 5. Custody Boundary Detection & Investigation Gap Planning (Sec 94 BNSS)
@@ -24,7 +24,7 @@ if sys.platform == "win32":
 
 from datetime import datetime, timezone
 from mantis.config import MantisConfig
-from mantis.core.models import CanonicalTransaction, CanonicalEntity, Rail, EntityKind
+from mantis.core.models import CanonicalTransaction, CanonicalEntity, Rail, EntityKind, LinkLabel
 from mantis.ingest.bank_statement import DynamicBankStatementAdapter
 from mantis.correlation.record_linkage import FellegiSunterLinker
 from mantis.correlation.seam_solver import MultiRailSeamSolver
@@ -70,6 +70,7 @@ def run_e2e_pipeline():
         txs, summary = adapter.parse()
         all_transactions.extend(txs)
         reconciliations.append(summary)
+        assert summary["reconciled"], f"{fname} did not reconcile: {summary['discrepancy_minor']} minor units"
 
         print(f"  -> {fname}: Ingested {len(txs)} txs | "
               f"Credits: ₹{summary['total_credits_minor']/100:,.2f} | "
@@ -102,22 +103,25 @@ def run_e2e_pipeline():
     # -----------------------------------------------------------------------
     # STEP 2: PROBABILISTIC RECORD LINKAGE (Fellegi-Sunter)
     # -----------------------------------------------------------------------
-    print("\n[STEP 2] Testing Probabilistic Record Linkage...")
+    print("\n[STEP 2] Testing Candidate Record Review Ranking...")
     linker = FellegiSunterLinker()
     rec_complaint = {
         "account_number_suffix": "6789",
         "vpa_handle": "ramesh.k92@oksbi",
         "phone_number": "9711234567",
-        "name_jaro_winkler": "Ramesh Kumar"
+        "name_token_jaccard": "Ramesh Kumar"
     }
     rec_statement = {
         "account_number_suffix": "6789",
         "vpa_handle": "ramesh.k92@okaxis", # Different PSP handle
         "phone_number": "9711234567",
-        "name_jaro_winkler": "Ramesh Kumar"
+        "name_token_jaccard": "Ramesh Kumar"
     }
     link_result = linker.compare_records(rec_complaint, rec_statement)
-    print(f"  -> Match Probability: {link_result['match_probability'] * 100:.2f}% | Label: {link_result['label'].value}")
+    assert link_result["review_rank_weight"] > 0, "Expected matching complaint and statement records to rank highly for review"
+    assert link_result["calibration"] == "uncalibrated_review_rank_only"
+    assert link_result["label"] != LinkLabel.CONFIRMED, "Uncalibrated linkage cannot confirm identity"
+    print(f"  -> Review Rank Weight: {link_result['review_rank_weight']:.2f} | Label: {link_result['label'].value} (uncalibrated)")
     print(f"     Evidence Factors: {[e['field'] for e in link_result['evidence']]}")
 
     # -----------------------------------------------------------------------
@@ -129,6 +133,7 @@ def run_e2e_pipeline():
 
     seam_solver = MultiRailSeamSolver(config.seam)
     seam_matches = seam_solver.solve_matches(fiat_debits, crypto_credits, market_fx_rate=90.0)
+    assert seam_matches, "Expected the scenario's fiat-to-crypto transfer to produce a seam candidate"
     print(f"  -> Solved Seam Matches: {len(seam_matches)} identified.")
     for sm in seam_matches:
         print(f"     * Seam Edge: {sm.reason} | Score: {sm.score} ({sm.label.value})")
@@ -142,6 +147,8 @@ def run_e2e_pipeline():
 
     tracer = MultiStrategyTracer(config.tracer)
     trace_res = tracer.trace_forward(seed_tx, all_transactions)
+    assert len(trace_res["edges"]) > 1, "Expected reference-linked transactions to continue the forward trail"
+    assert trace_res["hop_depth"] > 0, "Expected the trace to report at least one downstream hop"
     print(f"  -> Forward Trace complete: {len(trace_res['nodes'])} entities, {len(trace_res['edges'])} flow edges.")
 
     balances = {
@@ -152,6 +159,7 @@ def run_e2e_pipeline():
     }
     traced_txs = [e.transfer for e in trace_res["edges"]]
     taint_res = tracer.compute_taint_models(seed_tx, traced_txs, balances)
+    assert taint_res["poison_results"] and taint_res["haircut_results"], "Expected taint models to produce balances"
     print(f"  -> Taint Models Computed:")
     print(f"     Poison:  {taint_res['poison_results']}")
     print(f"     Haircut: {taint_res['haircut_results']}")
@@ -176,6 +184,7 @@ def run_e2e_pipeline():
             print(f"  -> GAP IDENTIFIED: Reached {gap_req.target_institution} (Unresolved: {gap_req.unresolved_amount_formatted})")
             print(f"     Statutory Basis: {gap_req.statutory_basis}")
             print(f"     Asks: {gap_req.asks[0]}")
+    assert gap_req is not None, "Expected the scenario custody boundary to produce a review draft"
 
     # -----------------------------------------------------------------------
     # STEP 6: TYPOLOGY DETECTORS WITH BENIGN COUNTER-HYPOTHESES
@@ -212,6 +221,7 @@ def run_e2e_pipeline():
         entity_directory=entity_dir,
         last_seen_times={"entity_mule3": datetime.now(timezone.utc)}
     )
+    assert targets and all(t.disputed_lien_minor <= t.current_balance_minor for t in targets), "Recovery figures must be non-empty and capped by supplied balances"
     print(f"  -> Ranked Recovery Targets: {len(targets)}")
     for tg in targets:
         print(f"     * Target: {tg.entity_display} ({tg.institution}) | "
@@ -244,7 +254,7 @@ def run_e2e_pipeline():
         print(f"     Confidence: {ans['confidence']} | Cited TxIDs: {ans['cited_tx_ids'][:2]}")
 
     print("\n" + "=" * 80)
-    print("[SUCCESS] All 8 MANTIS 2.0 Dynamic Framework Engines Verified!")
+    print("[SUCCESS] Scenario pipeline checks passed.")
     print("=" * 80)
 
 if __name__ == "__main__":

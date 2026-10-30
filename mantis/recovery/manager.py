@@ -1,13 +1,12 @@
 """
 MANTIS Recovery Intelligence & Asset Management Engine
-Ranks recovery targets by transparent recoverability scores.
-Calculates strict disputed-amount liens compliant with Rajasthan High Court (Shree Balaji, 2026).
-Generates statutory Section 106 BNSS notices with 90-day administrative hold tracking.
+Ranks candidate recovery targets by a transparent heuristic.
+Calculates proposed disputed-amount figures for human review; generated text is not legal advice or a directive.
 """
 
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import uuid
 
 @dataclass
@@ -40,7 +39,7 @@ class RecoveryManager:
                          entity_directory: Dict[str, Any],
                          last_seen_times: Dict[str, datetime]) -> List[RecoveryTarget]:
         """
-        Calculates actionable recovery targets and ranks them by recovery priority score.
+        Calculates candidate amounts and ranks them by a heuristic score.
         """
         targets: List[RecoveryTarget] = []
         now = datetime.now(timezone.utc)
@@ -52,8 +51,7 @@ class RecoveryManager:
             entity = entity_directory.get(entity_id, {})
             current_bal_minor = account_balances.get(entity_id, tainted_minor)
             
-            # MANDATORY RULE (Rajasthan HC - Shree Balaji Enterprises, 2026):
-            # Police cannot freeze entire accounts. Lien is restricted ONLY to the disputed amount.
+            # This caps the proposed amount arithmetically; it does not establish legal authority.
             disputed_lien = min(current_bal_minor, tainted_minor)
 
             last_seen = last_seen_times.get(entity_id, now)
@@ -61,7 +59,7 @@ class RecoveryManager:
 
             # Transparent Recovery Priority Score Formulation
             # Factors: Value Weight (0.45) + Time Freshness (0.35) + Destination Identifiability (0.20)
-            val_norm = min(1.0, disputed_lien / 10000000.0) # Normalized up to ₹1,00,000
+            val_norm = min(1.0, disputed_lien / 10000000.0)
             time_freshness = max(0.05, 1.0 - min(1.0, hours_elapsed / 72.0))
             identifiable_score = 1.0 if entity.get("kind") == "bank_account" else 0.6
 
@@ -85,10 +83,9 @@ class RecoveryManager:
             lien_fmt = f"₹{disputed_lien / factor:,.2f}" if asset == "INR" else f"{disputed_lien / factor:.2f} {asset}"
 
             if kind == "bank_account":
-                stat_action = f"Section 106 BNSS Specific Lien Directive ({lien_fmt})"
+                stat_action = f"Proposed disputed-amount review ({lien_fmt})"
                 notice = f"""
-STATUTORY DIRECTIVE UNDER SECTION 106 OF BHARATIYA NAGARIK SURAKSHA SANHITA, 2023
-(Successor to Section 102 Code of Criminal Procedure, 1973)
+PROPOSED RECOVERY ACTION — AUTHORIZED LEGAL REVIEW REQUIRED
 
 To: The Branch Manager / Nodal Cyber Crime Officer, {inst_name}
 Case FIR / NCRP Acknowledgement: {case_id}
@@ -96,24 +93,19 @@ Case FIR / NCRP Acknowledgement: {case_id}
 Pursuant to cybercrime trail reconstruction, illicit proceeds of crime have been traced to 
 Account No: {acct_val} standing in the name of '{entity.get('name', 'Account Holder')}'.
 
-IN ACCORDANCE WITH THE MANDATE OF THE HON'BLE RAJASTHAN HIGH COURT IN 'SHREE BALAJI ENTERPRISES V. RBI' (2026):
-You are strictly directed to mark an IMMEDIATE TRANSACTION-SPECIFIC LIEN on the exact disputed amount:
-DISPUTED LIEN AMOUNT: {lien_fmt}
+Proposed disputed amount for review: {lien_fmt}
 
-DO NOT PLACE A BLANKET DEBIT FREEZE ON THE ENTIRE ACCOUNT. The account holder must be permitted to 
-operate the account for any balance over and above the aforementioned lien amount.
-
-Intimation of this seizure has been submitted forthwith to the jurisdictional Judicial Magistrate.
-Expiry Date of Hold: {(now + timedelta(days=90)).strftime('%d-%b-%Y')} (Per MHA SOP Jan 2026).
+No action has been taken by this software. Confirm the legal basis, procedure, notice, court or
+magistrate requirements, and any applicable time limits with the authorized officer and counsel.
                 """.strip()
             else:
-                stat_action = f"Emergency VASP / Tether FCU Blacklist Request ({lien_fmt})"
+                stat_action = f"Proposed VASP recovery inquiry ({lien_fmt})"
                 notice = f"""
-EMERGENCY DIGITAL ASSET FREEZE REQUISITION
+PROPOSED DIGITAL ASSET RECOVERY INQUIRY — AUTHORIZED REVIEW REQUIRED
 To: Law Enforcement Liaison Division, {inst_name}
 Target Wallet: {acct_val}
 Disputed Asset: {lien_fmt}
-Ground: Traced illicit proceeds from cyber fraud syndicate under NCRP Ref: {case_id}.
+Reference: Case {case_id}. This software has not verified ownership, legal authority, or an actual freeze.
                 """.strip()
 
             targets.append(RecoveryTarget(

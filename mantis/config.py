@@ -18,10 +18,10 @@ class TracerConfig:
 class SeamConfig:
     p2p_window_hours: float = 2.0              # Max time elapsed between bank debit and crypto credit
     fx_tolerance_pct: float = 3.5              # Max acceptable deviation from market FX rate
-    default_inr_usdt_rate: float = 90.0        # Baseline benchmark rate
+    default_inr_usdt_rate: float | None = None # No market rate is assumed unless supplied with evidence
     weight_time: float = 0.40                  # Temporal proximity weight in affiliation scoring
     weight_value: float = 0.45                 # Value parity weight in affiliation scoring
-    weight_reputation: float = 0.15            # Counterparty risk weight
+    weight_reference_match: float = 0.15       # Explicit shared reference only; not reputation
     min_match_confidence: float = 0.70         # Threshold to emit candidate seam match
 
 @dataclass
@@ -32,7 +32,7 @@ class TypologyConfig:
     fan_out_window_hours: float = 2.0
     fan_in_min_degree: int = 5
     fan_in_sweep_ratio: float = 0.85
-    structuring_threshold_inr: float = 50000.0  # PMLA / Cash transaction threshold
+    structuring_threshold_inr: float = 50000.0  # Illustrative scenario threshold; not a legal reporting threshold
     structuring_window_pct: float = 0.10        # e.g. within 10% below threshold (₹45,000 - ₹49,999)
     peel_chain_min_ratio: float = 0.88          # Forward ratio
     peel_chain_max_ratio: float = 0.99

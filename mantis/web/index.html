@@ -1,395 +1,187 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MANTIS | Multi-Rail Financial Intelligence Platform</title>
-  <!-- Tailwind CSS & Cytoscape.js -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#19342b">
+  <title>MANTIS — Investigation workspace</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
   <style>
-    :root {
-      --bg: #0b132b;
-      --card-bg: #1c2541;
-      --accent: #f4d06f;
-      --border: #2a3a5e;
-    }
-    body { background-color: var(--bg); color: #e0e6ed; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    #cy { width: 100%; height: 520px; background-color: #0d1633; border-radius: 0.75rem; }
-    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #2a3a5e; border-radius: 3px; }
+    :root{color-scheme:light;--ink:#1d2b26;--muted:#68756e;--faint:#8b968f;--paper:#f3f5f2;--surface:#fff;--line:#dce3dd;--forest:#19342b;--forest2:#27473a;--green:#3b7053;--greenp:#e8f1e9;--amber:#a76522;--amberp:#f8efe2;--red:#a44d3e;--redp:#f7eae7;--blue:#466d83;--bluep:#eaf1f4;--shadow:0 1px 2px rgba(24,42,34,.045),0 8px 24px rgba(24,42,34,.035);font-family:"Segoe UI",Inter,-apple-system,BlinkMacSystemFont,sans-serif;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.45}button,input,select{font:inherit}button{cursor:pointer}.shell{min-height:100vh;display:grid;grid-template-columns:244px minmax(0,1fr)}
+    .sidebar{background:var(--forest);color:#e9eee9;min-height:100vh;display:flex;flex-direction:column;padding:22px 14px 16px}.brand{display:flex;align-items:center;gap:11px;padding:0 10px 25px;border-bottom:1px solid #ffffff20}.brand-mark{width:33px;height:33px;display:grid;place-items:center;border:1px solid #91ae91;color:#dce9d8;border-radius:9px 9px 9px 3px;font:700 17px Georgia,serif}.brand-name{font:700 19px Georgia,serif;letter-spacing:.035em}.brand-caption{display:block;color:#aabbb0;font-size:10px;margin-top:1px;letter-spacing:.08em;text-transform:uppercase}.workspace-label{color:#9eb2a5;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:23px 11px 8px}.case-switcher{margin:0 4px 20px;padding:10px 11px;border:1px solid #ffffff24;border-radius:6px;background:#ffffff0e}.case-switcher label{display:block;color:#a9bbb0;font-size:9px;margin-bottom:5px}.case-switcher select{width:100%;background:#213c31;color:#f1f4ef;border:1px solid #ffffff27;border-radius:4px;padding:7px 8px;font:600 11px ui-monospace,Consolas,monospace}.case-switcher .case-title{color:#c3cec6;font-size:10px;margin-top:6px}.nav-list{display:grid;gap:3px}.nav-item{display:flex;align-items:center;gap:11px;width:100%;border:0;border-radius:5px;padding:10px 11px;text-align:left;background:transparent;color:#c6d1c9;font-size:12px}.nav-item:hover{background:#ffffff13;color:#fff}.nav-item[aria-current=page]{background:#edf1e9;color:var(--forest);font-weight:650}.nav-icon{width:17px;height:17px;opacity:.82;flex:0 0 17px}.sidebar-foot{margin-top:auto;padding:18px 10px 0;border-top:1px solid #ffffff20}.local-note{color:#c5d0c8;font-size:10px;line-height:1.5}.local-dot{display:inline-block;width:7px;height:7px;background:#8ca98d;border-radius:50%;margin:0 6px 1px 0}.sidebar-link{display:inline-block;margin-top:10px;color:#dbe8d8;font-size:10px;text-decoration:underline;text-underline-offset:3px}
+    .main{min-width:0;padding:0 34px 42px}.topbar{min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:15px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11px}.crumbs{display:flex;gap:8px;align-items:center}.crumbs span:last-child{color:var(--ink);font-weight:600}.top-meta{display:flex;align-items:center;gap:9px}.auth-field{width:150px;padding:6px 8px;border:1px solid var(--line);border-radius:4px;font-size:10px;background:#fff}.env-pill,.soft-pill,.status-pill{display:inline-flex;align-items:center;gap:6px;border-radius:4px;padding:4px 8px;font-size:9px;font-weight:700;letter-spacing:.045em;text-transform:uppercase}.env-pill{background:var(--greenp);color:#38644b;border:1px solid #d4e3d5}.soft-pill{background:#eef1ed;color:#5b6861;border:1px solid var(--line)}.page-heading{padding:25px 0 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}.eyebrow{color:var(--green);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:750;margin-bottom:6px}h1,h2,h3,p{margin-top:0}h1{margin-bottom:5px;font:600 27px/1.12 Georgia,"Times New Roman",serif;letter-spacing:-.015em;color:#1b2b24}.subheading{color:var(--muted);font-size:12px;margin:0}.heading-actions{display:flex;gap:8px;align-items:center}.button{display:inline-flex;justify-content:center;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:5px;padding:8px 11px;font-size:11px;font-weight:650;transition:background .15s,border-color .15s}.button:hover{background:#f7f9f6;border-color:#b9c7bb}.button:disabled{opacity:.55;cursor:not-allowed}.button-primary{border-color:var(--forest);background:var(--forest);color:#fff}.button-primary:hover{background:var(--forest2);border-color:var(--forest2)}
+    .notice{display:none;margin:12px 0;padding:11px 13px;border:1px solid #e4c1b9;background:var(--redp);color:#78372d;border-radius:5px;font-size:11px;white-space:pre-wrap}.notice.visible{display:block}.notice.info{border-color:#d7e3d8;background:#f0f6f0;color:#365543}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:18px}.metric{padding:13px 15px;background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);min-height:78px}.metric-label{color:var(--muted);font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:650}.metric-value{margin-top:5px;color:var(--ink);font:600 22px/1.1 Georgia,serif}.metric-detail{color:var(--faint);font-size:10px;margin-top:3px}.view-nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 16px;overflow-x:auto}.view-tab{white-space:nowrap;position:relative;border:0;background:transparent;color:var(--muted);padding:10px 13px 11px;font-size:11px;font-weight:600}.view-tab:hover{color:var(--ink)}.view-tab[aria-selected=true]{color:var(--forest)}.view-tab[aria-selected=true]::after{content:"";position:absolute;height:2px;bottom:-1px;left:12px;right:12px;background:var(--green)}.view[hidden]{display:none}.panel{background:var(--surface);border:1px solid var(--line);border-radius:7px;box-shadow:var(--shadow)}.panel-head{padding:14px 16px 11px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid #e9ede9}.panel-title{margin:0;font-size:12px;font-weight:700;color:var(--ink)}.panel-subtitle{margin:3px 0 0;color:var(--muted);font-size:10px}.overview-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(250px,.85fr);gap:13px;align-items:start}.graph-wrap{height:390px;background:#fafbf9;border-radius:0 0 7px 7px}.graph-empty{height:100%;display:grid;place-content:center;text-align:center;color:var(--muted);font-size:11px;padding:25px}.graph-empty strong{font:600 18px Georgia,serif;color:var(--ink);margin-bottom:5px}.graph-empty[hidden]{display:none}#cy{width:100%;height:100%}.graph-caption{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:9px 14px;border-top:1px solid #e9ede9;color:var(--muted);font-size:9px}.legend-item{display:inline-flex;align-items:center;gap:6px}.legend-mark{width:9px;height:9px;border-radius:50%;border:1.5px solid currentColor}.legend-victim{color:var(--green);background:var(--greenp)}.legend-account{color:var(--amber);background:var(--amberp)}.legend-exchange{color:#8a6842;background:#f3eadc}.legend-wallet{color:var(--blue);background:var(--bluep)}.legend-seam{width:17px;height:0;border-top:2px dashed var(--amber)}.inspector{padding:11px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid #e9ede9}.inspector-label{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.07em}#inspect-label{font-size:10px;font-weight:600}#inspect-action{color:var(--muted);font-size:9px;text-align:right}.side-stack{display:grid;gap:12px}.section-pad{padding:14px 15px}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.section-heading h2{margin:0;font-size:11px;font-weight:700}.trace-list{display:grid}.trace-step{position:relative;padding:0 0 12px 20px;border-left:1px solid #d7dfd8;margin-left:5px}.trace-step:last-child{border-left-color:transparent;padding-bottom:0}.trace-step::before{content:"";position:absolute;top:3px;left:-5px;width:8px;height:8px;background:#fff;border:2px solid #75917c;border-radius:50%}.trace-step.boundary::before{border-color:var(--amber);background:var(--amberp)}.trace-title{font-size:10px;font-weight:650;color:var(--ink)}.trace-detail{margin-top:2px;font-size:9px;color:var(--muted)}.signal{border-top:1px solid #e9ede9;padding:9px 0}.signal:first-of-type{border-top:0;padding-top:0}.signal-row{display:flex;justify-content:space-between;align-items:center;gap:8px}.signal-name{font-size:10px;font-weight:650}.signal-copy{font-size:9px;color:var(--muted);margin-top:3px}.status-pill{padding:3px 6px;letter-spacing:.02em;text-transform:none}.status-review{color:#845319;background:var(--amberp)}.status-observed{color:#38644b;background:var(--greenp)}.status-inferred{color:#4e6d7b;background:var(--bluep)}.table-panel{margin-top:13px;overflow:hidden}.table-scroll{overflow:auto}table{border-collapse:collapse;width:100%;min-width:680px}th{text-align:left;padding:9px 12px;background:#f7f9f6;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--line)}td{padding:9px 12px;border-bottom:1px solid #edf0ed;color:#36443d;font-size:10px}tbody tr:last-child td{border-bottom:0}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:9px}.amount{text-align:right;font-variant-numeric:tabular-nums;font-weight:650;color:var(--ink)}.content-panel{padding:19px}.content-panel h2{font:600 21px Georgia,serif;margin-bottom:6px}.content-intro{color:var(--muted);max-width:760px;font-size:11px;margin-bottom:17px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.form-card{border:1px solid var(--line);border-radius:6px;padding:14px;background:#fff}.form-card h3{font-size:11px;margin:0 0 5px}.form-card p{font-size:10px;color:var(--muted);margin:0 0 10px}.field{display:grid;gap:4px;margin:8px 0}.field label{font-size:9px;color:var(--muted);font-weight:650}.field input,.field select{width:100%;padding:8px 9px;border:1px solid #cfd9d1;border-radius:4px;background:white;color:var(--ink);font-size:10px}.content-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:9px;margin-bottom:12px}.content-toolbar .field{margin:0;min-width:190px}.empty-state{text-align:center;padding:43px 20px}.empty-icon{display:grid;place-items:center;width:40px;height:40px;margin:0 auto 11px;border:1px solid #dbe4dc;border-radius:50%;color:var(--green);background:#f6f9f5;font:20px Georgia,serif}.empty-state h3{margin-bottom:5px;font:600 18px Georgia,serif}.empty-state p{max-width:500px;margin:0 auto;color:var(--muted);font-size:10px}.query-form{display:flex;gap:8px;padding:11px;border-top:1px solid var(--line)}.query-form input{flex:1;min-width:0;padding:9px 10px;border:1px solid #cfd9d1;border-radius:5px;outline:none;background:white;color:var(--ink);font-size:10px}.query-form input:focus{border-color:#6e9378;box-shadow:0 0 0 2px #e2ece2}.chat{display:grid;gap:9px;max-height:350px;overflow:auto;padding:14px;background:#fafbf9}.message{max-width:85%;border:1px solid var(--line);border-radius:7px;padding:9px 11px;font-size:10px;background:#fff;color:#435149;white-space:pre-wrap}.message.user{justify-self:end;background:var(--greenp);border-color:#d7e5d8}.message-label{display:block;color:var(--muted);font-size:8px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:3px}.modal{width:min(500px,calc(100% - 28px));border:1px solid var(--line);border-radius:8px;box-shadow:0 18px 60px #16271d30;padding:0}.modal::backdrop{background:#182a2570}.modal-head{padding:15px 17px;border-bottom:1px solid var(--line);font:600 18px Georgia,serif}.modal-body{padding:16px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 16px 16px}.footnote{margin:10px 0 0;color:var(--faint);font-size:9px}
+    @media(max-width:1050px){.shell{grid-template-columns:205px minmax(0,1fr)}.main{padding:0 20px 30px}.overview-grid{grid-template-columns:minmax(0,1fr)}.side-stack{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:720px){.shell{display:block}.sidebar{min-height:auto;padding:12px 12px 8px}.brand{border:0;padding:0 4px 9px}.workspace-label,.case-switcher,.sidebar-foot{display:none}.nav-list{display:flex;overflow-x:auto;gap:3px}.nav-item{width:auto;white-space:nowrap;padding:8px}.nav-icon{display:none}.main{padding:0 12px 24px}.topbar{min-height:46px}.auth-field{width:110px}.page-heading{padding:18px 0 13px;align-items:flex-start;flex-direction:column}h1{font-size:23px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.metric{min-height:70px;padding:10px 11px}.metric-value{font-size:19px}.graph-wrap{height:340px}.side-stack,.form-grid{grid-template-columns:minmax(0,1fr)}.content-panel{padding:14px}.query-form{flex-wrap:wrap}.query-form input{flex-basis:100%}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
-<body class="p-4 md:p-6 custom-scroll">
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark" aria-hidden="true">M</div><div><span class="brand-name">MANTIS</span><span class="brand-caption">Investigation workspace</span></div></div>
+      <div class="workspace-label">Selected case</div>
+      <div class="case-switcher"><label for="case-select">CASE FILE</label><select id="case-select" aria-label="Select investigation"><option value="">No case selected</option></select><div class="case-title" id="sidebar-case-title">Choose or create a case</div></div>
+      <div class="workspace-label">Case workspace</div>
+      <nav class="nav-list" aria-label="Case workspace">
+        <button class="nav-item" data-view="overview" aria-current="page"><svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="4" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="15.5" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="15.5" cy="16" r="2" stroke="currentColor" stroke-width="1.5"/><path d="m6 9 7.5-4M6 11l7.5 4" stroke="currentColor" stroke-width="1.5"/></svg>Overview</button>
+        <button class="nav-item" data-view="evidence"><svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 2.8h8l4 4V17H4V2.8Z" stroke="currentColor" stroke-width="1.5"/><path d="M12 3v4h4M7 11h6M7 14h6" stroke="currentColor" stroke-width="1.5"/></svg>Evidence & imports</button>
+        <button class="nav-item" data-view="entities"><svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="7" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 16c.4-2.6 2-4 4.5-4s4.1 1.4 4.5 4M13 5h4m-2-2v4m-2 5.2c2.1.1 3.4 1.3 3.8 3.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Entities</button>
+        <button class="nav-item" data-view="analysis"><svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 16.5 7.5 11l3 2 6.5-8" stroke="currentColor" stroke-width="1.5"/><path d="M12.8 5H17v4.2" stroke="currentColor" stroke-width="1.5"/></svg>Trace & analysis</button>
+        <button class="nav-item" data-view="recovery"><svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 6.5h14v10H3zM5.5 6.5V4h9v2.5M6.5 10h7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Recovery review</button>
+        <button class="nav-item" data-view="query"><svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 4.5h14v9H9l-4.5 3v-3H3v-9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6.5 8h7m-7 2.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Case query</button>
+      </nav>
+      <div class="sidebar-foot"><div class="local-note"><span class="local-dot"></span>Case files and uploaded evidence remain in the configured local database and evidence folder.</div><a class="sidebar-link" href="/docs">API documentation</a></div>
+    </aside>
 
-  <!-- TOP HEADER -->
-  <header class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-[#2a3a5e] pb-4 mb-6 gap-4">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-[#f4d06f] flex items-center justify-center text-[#0b132b] font-black text-xl shadow-lg shadow-amber-500/20">M</div>
-      <div>
-        <div class="flex items-center gap-2">
-          <h1 class="text-xl md:text-2xl font-black text-white tracking-wide">MANTIS</h1>
-          <span class="text-[10px] px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700/50 font-bold uppercase">v2.0 Multi-Rail</span>
-          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 font-bold uppercase">Sec 63 BSA Ready</span>
-        </div>
-        <p class="text-xs text-slate-400">Cross-Rail Financial Crime Trail Reconstruction & Restitution Cockpit</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <div class="bg-[#1c2541] border border-[#2a3a5e] px-3 py-1.5 rounded-lg flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-xs text-slate-300">Active Case: <strong id="active-case-num" class="text-[#f4d06f]">NCRP-2026-8819</strong></span>
-      </div>
-      <button onclick="seedDemoCase()" class="px-3 py-1.5 rounded-lg bg-[#f4d06f] text-[#0b132b] font-bold text-xs hover:bg-[#e5be53] transition shadow">
-        &circlearrowright; Load Demo Case
-      </button>
-    </div>
-  </header>
+    <main class="main">
+      <div class="topbar"><div class="crumbs"><span>Investigations</span><span aria-hidden="true">/</span><span id="breadcrumb-case">No case selected</span></div><div class="top-meta"><input id="api-key" class="auth-field" type="password" autocomplete="off" placeholder="API key (if enabled)" aria-label="API access key"><span class="env-pill">Local workspace</span></div></div>
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <header class="page-heading"><div><div class="eyebrow">Case workspace</div><h1 id="page-title">Investigations</h1><p class="subheading" id="page-subtitle">Create a case and import source records to begin analysis.</p></div><div class="heading-actions"><button id="new-case-open" class="button button-primary" type="button">Create case</button></div></header>
 
-  <!-- MAIN COCKPIT GRID -->
-  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <section id="case-workspace" hidden>
+        <section class="metrics" aria-label="Case summary">
+          <article class="metric"><div class="metric-label">Evidence documents</div><div class="metric-value" id="metric-docs">0</div><div class="metric-detail">Original uploads retained</div></article>
+          <article class="metric"><div class="metric-label">Transfer records</div><div class="metric-value" id="metric-transfers">0</div><div class="metric-detail">Across uploaded sources</div></article>
+          <article class="metric"><div class="metric-label">Trace runs</div><div class="metric-value" id="metric-traces">0</div><div class="metric-detail">Investigator initiated</div></article>
+          <article class="metric"><div class="metric-label">Review indicators</div><div class="metric-value" id="metric-episodes">0</div><div class="metric-detail">Heuristics, not findings</div></article>
+        </section>
+        <nav class="view-nav" aria-label="Case views"><button class="view-tab" data-view="overview" aria-selected="true">Overview</button><button class="view-tab" data-view="evidence" aria-selected="false">Evidence & imports</button><button class="view-tab" data-view="entities" aria-selected="false">Entities</button><button class="view-tab" data-view="analysis" aria-selected="false">Trace & analysis</button><button class="view-tab" data-view="recovery" aria-selected="false">Recovery review</button><button class="view-tab" data-view="query" aria-selected="false">Case query</button></nav>
 
-    <!-- LEFT COLUMN: Case Stats & Actions (1 Col) -->
-    <div class="space-y-4">
-      
-      <!-- Summary Card -->
-      <div class="p-4 rounded-xl bg-[#1c2541] border border-[#2a3a5e] shadow-sm">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Case Overview</h3>
-        <div class="grid grid-cols-2 gap-3 text-xs">
-          <div class="p-2.5 rounded bg-[#0b132b] border border-[#2a3a5e]">
-            <div class="text-slate-400 text-[10px]">Total Traced</div>
-            <div class="text-base font-bold text-white mt-0.5" id="stat-total-lost">₹1,00,000</div>
+        <section class="view" id="view-overview">
+          <div class="overview-grid">
+            <article class="panel"><div class="panel-head"><div><h2 class="panel-title">Funds flow</h2><p class="panel-subtitle" id="graph-subtitle">Run a trace from a selected transfer to build this view.</p></div><span class="soft-pill" id="graph-status">No trace selected</span></div>
+              <div class="graph-wrap"><div id="graph-empty" class="graph-empty"><strong>No trace results yet</strong><span>Select a seed transfer in Trace & analysis.</span></div><div id="cy" hidden></div></div>
+              <div class="graph-caption"><span class="legend-item"><i class="legend-mark legend-victim"></i>Bank account</span><span class="legend-item"><i class="legend-mark legend-account"></i>Unresolved entity</span><span class="legend-item"><i class="legend-mark legend-exchange"></i>Custody boundary</span><span class="legend-item"><i class="legend-mark legend-wallet"></i>Wallet</span><span class="legend-item"><i class="legend-seam"></i>Candidate seam</span></div>
+              <div class="inspector"><div><div class="inspector-label">Selection</div><span id="inspect-label">No transfer selected</span></div><div id="inspect-action">Observed source records only</div></div>
+            </article>
+            <div class="side-stack"><article class="panel section-pad"><div class="section-heading"><h2>Latest trace</h2><span class="soft-pill" id="trace-depth">No run</span></div><div id="latest-trace" class="trace-detail">Run a trace to see the selected seed and downstream records.</div></article>
+              <article class="panel section-pad"><div class="section-heading"><h2>Review indicators</h2><span class="soft-pill">Heuristic</span></div><div id="indicator-list"><div class="trace-detail">No analysis run stored.</div></div></article>
+              <article class="panel section-pad"><div class="section-heading"><h2>Recent evidence</h2><button class="button" type="button" data-go="evidence">View all</button></div><div id="recent-documents" class="trace-detail">No files uploaded.</div></article>
+            </div>
           </div>
-          <div class="p-2.5 rounded bg-[#0b132b] border border-emerald-900/50">
-            <div class="text-emerald-400 text-[10px]">Recoverable</div>
-            <div class="text-base font-bold text-emerald-300 mt-0.5" id="stat-recoverable">₹40,000</div>
-          </div>
-          <div class="p-2.5 rounded bg-[#0b132b] border border-[#2a3a5e]">
-            <div class="text-slate-400 text-[10px]">Hops Reconstructed</div>
-            <div class="text-base font-bold text-white mt-0.5" id="stat-hops">4 Hops</div>
-          </div>
-          <div class="p-2.5 rounded bg-[#0b132b] border border-amber-900/50">
-            <div class="text-amber-400 text-[10px]">Seam Transitions</div>
-            <div class="text-base font-bold text-amber-300 mt-0.5" id="stat-seams">1 USDT</div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- Ingest Statement Box -->
-      <div class="p-4 rounded-xl bg-[#1c2541] border border-[#2a3a5e]">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Dynamic Statement Ingestion</h3>
-        <p class="text-[11px] text-slate-400 mb-3">Upload any bank CSV. The mathematical reconciliation invariant runs automatically.</p>
-        <div class="space-y-2 text-xs">
-          <input type="file" id="statement-upload" class="w-full text-[11px] file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-[#0b132b] file:text-[#f4d06f] hover:file:bg-[#131b33] cursor-pointer">
-          <input type="text" id="statement-owner" placeholder="Account Owner Name (Optional)" class="w-full p-2 rounded bg-[#0b132b] border border-[#2a3a5e] text-xs text-white">
-          <button onclick="uploadStatement()" class="w-full py-2 rounded bg-blue-600 hover:bg-blue-500 font-semibold text-white transition text-xs">
-            Ingest & Reconcile Statement
-          </button>
-        </div>
-        <div id="reconciliation-badge" class="mt-2 text-[11px] hidden p-2 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800"></div>
-      </div>
+        <section class="view" id="view-evidence" hidden>
+          <article class="panel content-panel"><div class="eyebrow">Source records</div><h2>Import evidence</h2><p class="content-intro">Uploads are stored by SHA-256 in the configured evidence folder. CSV rows retain their source document hash and row context. Reconciliation reports whether the supplied statement balances; it does not verify authenticity.</p>
+            <div class="form-grid">
+              <form id="csv-form" class="form-card"><h3>Bank statement · CSV</h3><p>Import a statement with transaction date, debit or credit, and optional running balance columns.</p><div class="field"><label for="csv-file">CSV file</label><input id="csv-file" name="file" type="file" accept=".csv,text/csv" required></div><div class="field"><label for="owner-name">Account holder label</label><input id="owner-name" name="account_owner_name" maxlength="255" placeholder="Name or account label"></div><button class="button button-primary" type="submit">Import statement</button></form>
+              <form id="chain-form" class="form-card"><h3>TRON transfer export · JSON</h3><p>Upload an export containing transaction hash, addresses, integer amount, decimals, and block timestamp in milliseconds.</p><div class="field"><label for="chain-file">JSON file</label><input id="chain-file" name="file" type="file" accept=".json,application/json" required></div><button class="button button-primary" type="submit">Import transfer export</button></form>
+            </div>
+          </article>
+          <article class="panel table-panel"><div class="panel-head"><div><h2 class="panel-title">Evidence register</h2><p class="panel-subtitle">Original file hash, parser, and import state</p></div><button class="button" type="button" id="refresh-evidence">Refresh</button></div><div class="table-scroll"><table><thead><tr><th>File</th><th>Type</th><th>Imported</th><th>SHA-256</th><th>Status</th><th>Original</th></tr></thead><tbody id="documents-body"><tr><td colspan="6">No evidence files imported.</td></tr></tbody></table></div></article>
+          <article class="panel table-panel"><div class="panel-head"><div><h2 class="panel-title">Case activity log</h2><p class="panel-subtitle">Hash-linked record of imports, entity reviews, and analysis runs</p></div><span id="audit-status" class="soft-pill">Checking integrity</span></div><div class="table-scroll"><table><thead><tr><th>Time (UTC)</th><th>Actor</th><th>Action</th><th>Event hash</th></tr></thead><tbody id="audit-body"><tr><td colspan="4">No activity recorded.</td></tr></tbody></table></div><p class="footnote" style="padding:0 13px 12px">Hash links help reveal edits to stored events. They are not a substitute for external immutable storage or signed chain-of-custody procedures.</p></article>
+          <article class="panel table-panel"><div class="panel-head"><div><h2 class="panel-title">Transfer ledger</h2><p class="panel-subtitle">Rows point back to their source file and reference</p></div><span class="soft-pill" id="transaction-count">0 records</span></div><div class="table-scroll"><table><thead><tr><th>Timestamp (UTC)</th><th>Rail</th><th>Source → destination</th><th class="amount">Amount</th><th>Reference</th><th>Source file</th></tr></thead><tbody id="transactions-body"><tr><td colspan="6">No transfer records imported.</td></tr></tbody></table></div><div class="content-toolbar" style="padding:10px 13px;justify-content:space-between"><span id="page-indicator" class="trace-detail"></span><div><button id="prev-page" class="button" type="button">Previous</button> <button id="next-page" class="button" type="button">Next</button></div></div></article>
+        </section>
 
-      <!-- Active Detectors Summary -->
-      <div class="p-4 rounded-xl bg-[#1c2541] border border-[#2a3a5e]">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Detected Typologies</h3>
-        <div id="typologies-list" class="space-y-2 text-xs max-h-48 overflow-y-auto custom-scroll">
-          <div class="p-2 rounded bg-[#0b132b] border border-amber-900/40">
-            <div class="font-bold text-amber-300">Rapid Pass-Through</div>
-            <div class="text-[10px] text-slate-400">Ramesh Kumar (SBI) drained in 5.2m</div>
-          </div>
-          <div class="p-2 rounded bg-[#0b132b] border border-indigo-900/40">
-            <div class="font-bold text-indigo-300">Structuring Under Cap</div>
-            <div class="text-[10px] text-slate-400">Aman Verma (Axis) ₹49,500 P2P buy</div>
-          </div>
-        </div>
-      </div>
+        <section class="view" id="view-entities" hidden><article class="panel content-panel"><div class="eyebrow">Entity register</div><h2>Accounts, wallets, and unresolved references</h2><p class="content-intro">Uploaded statement rows create account and transaction-reference entities. Review and classify unresolved records; classification is an investigator annotation, not identity verification.</p></article><article class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Entity</th><th>Type</th><th>Observed</th><th>Custody boundary</th><th>Review</th></tr></thead><tbody id="entities-body"><tr><td colspan="5">No entities loaded.</td></tr></tbody></table></div></article></section>
 
-    </div>
+        <section class="view" id="view-analysis" hidden>
+          <article class="panel content-panel"><div class="eyebrow">Investigator initiated</div><h2>Trace a transfer</h2><p class="content-intro">Select a specific seed record. The result is a time-ordered, same-asset graph walk. It does not allocate mixed account balances or prove that all downstream value came from the seed.</p>
+            <form id="trace-form" class="content-toolbar"><div class="field"><label for="seed-transfer">Seed transfer</label><select id="seed-transfer" required><option value="">Import records first</option></select></div><div class="field"><label for="fx-rate">Observed INR/USDT rate (optional)</label><input id="fx-rate" type="number" min="0.000001" step="any" placeholder="Leave blank to skip seam scoring"></div><button class="button button-primary" type="submit">Run trace</button></form>
+            <p class="footnote">A fiat/crypto candidate is generated only when a rate is supplied. Record the source and observation time in your case notes; this prototype stores the numeric rate with the run.</p>
+            <div id="analysis-result" class="detail-card" style="margin-top:14px"><div class="trace-detail">No trace run selected.</div></div>
+          </article>
+          <article class="panel table-panel"><div class="panel-head"><div><h2 class="panel-title">Trace history</h2><p class="panel-subtitle">Seed and result references are retained per run</p></div></div><div class="table-scroll"><table><thead><tr><th>Run</th><th>Started</th><th>Seed transfer</th><th>Hops</th><th>Transfers</th><th>Open</th></tr></thead><tbody id="trace-runs-body"><tr><td colspan="6">No trace runs stored.</td></tr></tbody></table></div></article>
+        </section>
 
-    <!-- RIGHT/CENTER COLUMN: Graph, Tabs & Actions (3 Cols) -->
-    <div class="lg:col-span-3 space-y-4">
-      
-      <!-- View Navigation Tabs -->
-      <div class="flex gap-2 border-b border-[#2a3a5e] pb-2 overflow-x-auto text-xs">
-        <button onclick="setTab('graph')" id="btn-tab-graph" class="px-3.5 py-1.5 rounded-lg font-bold bg-[#f4d06f] text-[#0b132b]">Money Trail Graph</button>
-        <button onclick="setTab('gaps')" id="btn-tab-gaps" class="px-3.5 py-1.5 rounded-lg font-bold text-slate-300 hover:bg-[#1c2541]">Investigation Gap Planner (Sec 94)</button>
-        <button onclick="setTab('recovery')" id="btn-tab-recovery" class="px-3.5 py-1.5 rounded-lg font-bold text-slate-300 hover:bg-[#1c2541]">Recovery Center (Sec 106 Lien)</button>
-        <button onclick="setTab('copilot')" id="btn-tab-copilot" class="px-3.5 py-1.5 rounded-lg font-bold text-slate-300 hover:bg-[#1c2541]">AI Copilot Query</button>
-      </div>
+        <section class="view" id="view-recovery" hidden><article class="panel content-panel"><div class="eyebrow">Recovery review</div><h2>No recovery amount calculated</h2><p class="content-intro">This application does not currently store verified current balances or support asset-specific fund-lot allocation. It will not infer a lien amount from transaction volume.</p><div class="empty-state"><div class="empty-icon" aria-hidden="true">—</div><h3>Balance and provenance data are required</h3><p>Any future estimate must identify the balance source and observation time, document an asset-specific taint method, and remain separate from an authorized legal decision.</p></div></article></section>
 
-      <!-- TAB 1: GRAPH CANVAS -->
-      <div id="view-graph" class="space-y-3">
-        <div class="relative rounded-xl border border-[#2a3a5e] overflow-hidden">
-          <div id="cy"></div>
-          <!-- Graph Legend -->
-          <div class="absolute bottom-3 left-3 bg-[#0b132b]/90 backdrop-blur p-2.5 rounded-lg border border-[#2a3a5e] text-[10px] space-y-1">
-            <div class="font-bold text-white mb-1 uppercase tracking-wider">Legend</div>
-            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500"></span> Victim Bank Account</div>
-            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-amber-500"></span> Layer 1 / 2 Mule Account</div>
-            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500"></span> P2P Exchange / Escrow</div>
-            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-cyan-500"></span> TRON Blockchain Wallet</div>
-            <div class="flex items-center gap-2"><span class="w-4 h-0.5 bg-amber-400"></span> Seam Match Edge</div>
-          </div>
-        </div>
+        <section class="view" id="view-query" hidden><article class="panel"><div class="panel-head"><div><div class="eyebrow" style="margin-bottom:4px">Case query</div><h2 class="panel-title">Query stored case records</h2><p class="panel-subtitle">Deterministic responses from the selected case; cite source IDs and review limitations.</p></div></div><div class="chat" id="chat" aria-live="polite"><div class="message"><span class="message-label">MANTIS</span>Ask about largest transactions, detected patterns, gaps, or a fiat/crypto link.</div></div><form id="query-form" class="query-form"><input id="query-input" type="text" autocomplete="off" placeholder="Ask about records in this case…" aria-label="Question about case records"><button class="button button-primary" type="submit">Search records</button></form></article></section>
+      </section>
 
-        <!-- Node Details Drawer -->
-        <div id="node-inspector" class="p-3 rounded-xl bg-[#1c2541] border border-[#2a3a5e] text-xs flex items-center justify-between">
-          <div>
-            <span class="text-slate-400 text-[10px] uppercase font-bold">Selected Node:</span>
-            <span id="inspect-label" class="font-bold text-white ml-2">Click any node or edge to inspect</span>
-          </div>
-          <div id="inspect-action" class="text-right text-slate-400 text-[11px]"></div>
-        </div>
-      </div>
-
-      <!-- TAB 2: INVESTIGATION GAP PLANNER -->
-      <div id="view-gaps" class="hidden p-5 rounded-xl bg-[#1c2541] border border-[#2a3a5e] space-y-4">
-        <div>
-          <h3 class="text-sm font-bold text-white uppercase">Investigation Gap Planner & Custody Boundaries</h3>
-          <p class="text-xs text-slate-400">Identifies where the money trail enters private exchanges and drafts Section 94 BNSS (Sec 91 CrPC) notices.</p>
-        </div>
-        <div class="p-4 rounded-lg bg-[#0b132b] border border-amber-900/50 text-xs space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-amber-300 text-sm">Custody Boundary: Krypton P2P Merchant Escrow</span>
-            <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 font-mono text-[10px] border border-rose-800">Unresolved: ₹49,500.00</span>
-          </div>
-          <p class="text-slate-300 text-xs">
-            Funds transitioned from Axis Bank into an off-chain P2P escrow account. Internal customer trading ledgers, KYC dossiers, and downstream withdrawal addresses are required.
-          </p>
-          <div class="bg-black/40 p-3 rounded font-mono text-[11px] text-slate-300 max-h-48 overflow-y-auto custom-scroll border border-[#2a3a5e]" id="sec94-notice-preview">
-NOTICE UNDER SECTION 94 OF BHARATIYA NAGARIK SURAKSHA SANHITA (BNSS), 2023
-To: Compliance Officer, Krypton P2P Escrow Exchange
-Subject: Production of Documents in Case Ref: NCRP-2026-8819
-
-Whereas proceeds of cyber fraud aggregating to ₹49,500.00 arrived at your order reference on 28-Oct-2026.
-You are hereby directed to produce forthwith:
-1. Verified e-KYC dossier of the trading counterparty.
-2. Complete internal deposit ledger and order book matched counterparty details.
-3. Destination TRON blockchain addresses and TxIDs for all subsequent withdrawals.
-          </div>
-          <button onclick="alert('Notice Downloaded for Investigating Officer Signature')" class="px-4 py-2 rounded bg-[#f4d06f] text-[#0b132b] font-bold text-xs hover:bg-[#e5be53]">
-            &darr; Export Signed Notice PDF
-          </button>
-        </div>
-      </div>
-
-      <!-- TAB 3: RECOVERY MANAGEMENT CENTER -->
-      <div id="view-recovery" class="hidden p-5 rounded-xl bg-[#1c2541] border border-[#2a3a5e] space-y-4">
-        <div>
-          <h3 class="text-sm font-bold text-white uppercase">Recovery Management Center</h3>
-          <p class="text-xs text-slate-400">Court-admissible lien calculations compliant with Rajasthan HC (Shree Balaji Enterprises, 2026).</p>
-        </div>
-        <div class="overflow-x-auto rounded-lg border border-[#2a3a5e]">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-[#0b132b] text-slate-400 uppercase text-[10px]">
-              <tr>
-                <th class="p-3">Target Institution</th>
-                <th class="p-3">Account / Wallet</th>
-                <th class="p-3">Disputed Lien</th>
-                <th class="p-3">Score</th>
-                <th class="p-3">Statutory Basis</th>
-                <th class="p-3">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[#2a3a5e] text-slate-300">
-              <tr class="hover:bg-[#131b33]">
-                <td class="p-3 font-semibold text-white">ICICI Bank</td>
-                <td class="p-3">Pooja Singh (XXXX7890)</td>
-                <td class="p-3 font-bold text-emerald-400">₹40,000.00</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">0.92 (Critical)</span></td>
-                <td class="p-3 text-[11px]">Sec 106 BNSS Specific Lien</td>
-                <td class="p-3"><button onclick="alert('Section 106 BNSS Specific Lien Notice Generated for ICICI Bank')" class="px-2.5 py-1 rounded bg-blue-600 text-white font-semibold text-[10px]">Generate Lien</button></td>
-              </tr>
-              <tr class="hover:bg-[#131b33]">
-                <td class="p-3 font-semibold text-white">Tether T3 FCU</td>
-                <td class="p-3 font-mono text-[10px]">TNVaKWsmBsZ3rQf59ZpE...</td>
-                <td class="p-3 font-bold text-cyan-400">550.00 USDT</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">0.85 (High)</span></td>
-                <td class="p-3 text-[11px]">Emergency Blacklist Request</td>
-                <td class="p-3"><button onclick="alert('USDT Blacklist Request Generated for Tether Law Enforcement Liaison')" class="px-2.5 py-1 rounded bg-blue-600 text-white font-semibold text-[10px]">Requisition</button></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- TAB 4: AI INVESTIGATION COPILOT -->
-      <div id="view-copilot" class="hidden p-5 rounded-xl bg-[#1c2541] border border-[#2a3a5e] space-y-4">
-        <div>
-          <h3 class="text-sm font-bold text-white uppercase">AI Investigation Copilot (Evidence-First)</h3>
-          <p class="text-xs text-slate-400">Strictly grounded in verified database transactions. No hallucinations.</p>
-        </div>
-        <div id="copilot-chat" class="p-4 rounded-lg bg-[#0b132b] border border-[#2a3a5e] h-64 overflow-y-auto custom-scroll space-y-3 text-xs">
-          <div class="p-3 rounded bg-[#1c2541] text-slate-300 border border-[#2a3a5e]">
-            <strong>MANTIS Copilot:</strong> I am connected to the Case NCRP-2026-8819 database. You can ask me to trace amounts, check time windows, inspect typology evidence, or query missing information.
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <input type="text" id="copilot-input" placeholder="e.g., What are the 3 largest transactions in this trail?" class="flex-1 p-2.5 rounded bg-[#0b132b] border border-[#2a3a5e] text-xs text-white">
-          <button onclick="askCopilot()" class="px-4 py-2 rounded bg-[#f4d06f] text-[#0b132b] font-bold text-xs hover:bg-[#e5be53]">
-            Ask Copilot
-          </button>
-        </div>
-      </div>
-
-    </div>
+      <section id="no-case" class="panel empty-state"><div class="empty-icon" aria-hidden="true">+</div><h3>No investigation selected</h3><p>Create a case, then import bank statements or chain-transfer exports. MANTIS will display only records supplied to this local workspace.</p><button class="button button-primary" id="empty-create" type="button" style="margin-top:14px">Create an investigation</button></section>
+      <p class="footnote">Candidate links and heuristic indicators are investigative leads. This software does not establish ownership, guilt, legal authority, or a recoverable balance.</p>
+    </main>
   </div>
 
+  <dialog id="case-dialog" class="modal"><form id="case-form"><div class="modal-head">Create investigation</div><div class="modal-body"><div class="field"><label for="new-title">Case title</label><input id="new-title" name="title" maxlength="255" required></div><div class="field"><label for="complaint-ref">Complaint / FIR reference</label><input id="complaint-ref" name="complaint_ref" maxlength="128"></div><div class="field"><label for="jurisdiction">Jurisdiction</label><input id="jurisdiction" name="jurisdiction" maxlength="255" value="State Cyber Crime Police Station"></div><div class="field"><label for="officer">Investigating officer</label><input id="officer" name="investigating_officer" maxlength="255" value=""></div></div><div class="modal-actions"><button class="button" type="button" id="case-cancel">Cancel</button><button class="button button-primary" type="submit">Create case</button></div></form></dialog>
+  <dialog id="entity-dialog" class="modal"><form id="entity-form"><div class="modal-head">Review entity</div><div class="modal-body"><input id="entity-id" type="hidden"><div class="field"><label for="entity-display">Display label</label><input id="entity-display" maxlength="255" required></div><div class="field"><label for="entity-kind">Entity type</label><select id="entity-kind"><option value="unknown">Unknown</option><option value="bank_account">Bank account</option><option value="wallet">Wallet</option><option value="exchange">Exchange</option><option value="service">Service</option><option value="cash_exit">Cash exit</option></select></div><label class="field" style="display:flex;align-items:center;grid-template-columns:auto 1fr"><input id="entity-boundary" type="checkbox"> Mark as a possible custody boundary</label></div><div class="modal-actions"><button class="button" type="button" id="entity-cancel">Cancel</button><button class="button button-primary" type="submit">Save review</button></div></form></dialog>
+
   <script>
-    // Cytoscape initialization
-    let cy = null;
-
-    const DEMO_ELEMENTS = {
-      nodes: [
-        { data: { id: "victim", label: "Dr. Rajesh Sharma\n(Victim)", kind: "victim", balance: "₹83,970.50" } },
-        { data: { id: "mule1", label: "Ramesh Kumar\n(Layer 1 Mule)", kind: "mule", balance: "₹1,240.00" } },
-        { data: { id: "mule2", label: "Aman Verma\n(Layer 2 Mule A)", kind: "mule", balance: "₹950.00" } },
-        { data: { id: "mule3", label: "Pooja Singh\n(Layer 2 Mule B)", kind: "mule", balance: "₹40,000.00" } },
-        { data: { id: "p2p", label: "Krypton P2P\n(Escrow Desk)", kind: "exchange", balance: "₹49,500.00" } },
-        { data: { id: "tron_escrow", label: "P2P Escrow Wallet\n(TYDzsY...)", kind: "wallet", balance: "0 USDT" } },
-        { data: { id: "tron_cons", label: "Syndicate Head\n(TNVaKW...)", kind: "wallet", balance: "550 USDT" } }
-      ],
-      edges: [
-        { data: { id: "e1", source: "victim", target: "mule1", label: "₹1,00,000 (UPI)", edge_class: "flow" } },
-        { data: { id: "e2a", source: "mule1", target: "mule2", label: "₹60,000 (UPI)", edge_class: "flow" } },
-        { data: { id: "e2b", source: "mule1", target: "mule3", label: "₹40,000 (UPI)", edge_class: "flow" } },
-        { data: { id: "e3", source: "mule2", target: "p2p", label: "₹49,500 (IMPS)", edge_class: "flow" } },
-        { data: { id: "seam1", source: "p2p", target: "tron_escrow", label: "₹49.5k ↔ 550 USDT", edge_class: "seam" } },
-        { data: { id: "e4", source: "tron_escrow", target: "tron_cons", label: "550 USDT (TRC20)", edge_class: "flow" } }
-      ]
-    };
-
-    function initCytoscape(elements) {
-      cy = cytoscape({
-        container: document.getElementById('cy'),
-        elements: elements,
-        style: [
-          {
-            selector: 'node',
-            style: {
-              'label': 'data(label)',
-              'text-valign': 'center',
-              'text-halign': 'center',
-              'color': '#fff',
-              'font-size': '10px',
-              'font-weight': 'bold',
-              'text-wrap': 'wrap',
-              'width': 85,
-              'height': 50,
-              'shape': 'roundrectangle',
-              'border-width': 2,
-              'border-color': '#2a3a5e'
-            }
-          },
-          {
-            selector: 'node[kind="victim"]',
-            style: { 'background-color': '#059669', 'border-color': '#34d399' }
-          },
-          {
-            selector: 'node[kind="mule"]',
-            style: { 'background-color': '#d97706', 'border-color': '#fbbf24' }
-          },
-          {
-            selector: 'node[kind="exchange"]',
-            style: { 'background-color': '#7c3aed', 'border-color': '#a78bfa' }
-          },
-          {
-            selector: 'node[kind="wallet"]',
-            style: { 'background-color': '#0891b2', 'border-color': '#22d3ee' }
-          },
-          {
-            selector: 'edge[edge_class="flow"]',
-            style: {
-              'width': 2.5,
-              'line-color': '#3b82f6',
-              'target-arrow-color': '#3b82f6',
-              'target-arrow-shape': 'triangle',
-              'curve-style': 'bezier',
-              'label': 'data(label)',
-              'font-size': '9px',
-              'color': '#93c5fd',
-              'text-background-color': '#0b132b',
-              'text-background-opacity': 0.8
-            }
-          },
-          {
-            selector: 'edge[edge_class="seam"]',
-            style: {
-              'width': 3.5,
-              'line-color': '#f4d06f',
-              'line-style': 'dashed',
-              'target-arrow-color': '#f4d06f',
-              'target-arrow-shape': 'triangle',
-              'curve-style': 'bezier',
-              'label': 'data(label)',
-              'font-size': '9px',
-              'color': '#f4d06f',
-              'text-background-color': '#0b132b',
-              'text-background-opacity': 0.8
-            }
-          }
-        ],
-        layout: {
-          name: 'breadthfirst',
-          directed: true,
-          padding: 30,
-          spacingFactor: 1.25
-        }
-      });
-
-      cy.on('tap', 'node', function(evt){
-        var node = evt.target;
-        document.getElementById('inspect-label').innerText = node.data('label').replace('\n', ' - ') + " | Balance: " + node.data('balance');
-      });
+    const state = {caseId:null, caseRecord:null, transactions:[], documents:[], entities:[], trace:null, traceRuns:[], offset:0, limit:100, graph:null};
+    const $ = id => document.getElementById(id);
+    const apiKey = $('api-key');
+    apiKey.value = sessionStorage.getItem('mantisApiKey') || '';
+    apiKey.addEventListener('change', () => { sessionStorage.setItem('mantisApiKey', apiKey.value); if (state.caseId) loadCase(state.caseId); });
+    function showNotice(message, kind='error') { const el=$('notice'); el.textContent=message; el.className=`notice visible${kind==='info'?' info':''}`; }
+    function clearNotice(){ $('notice').className='notice'; $('notice').textContent=''; }
+    async function api(path, options={}) {
+      const headers = new Headers(options.headers || {});
+      if (apiKey.value.trim()) headers.set('Authorization', `Bearer ${apiKey.value.trim()}`);
+      const response = await fetch(path, {...options, headers});
+      const contentType = response.headers.get('content-type') || '';
+      const payload = contentType.includes('application/json') ? await response.json() : await response.text();
+      if (!response.ok) { const detail=payload?.detail; throw new Error(typeof detail==='string'?detail:(detail?.message||JSON.stringify(detail)||response.statusText)); }
+      return payload;
     }
-
-    function setTab(tabName) {
-      ['graph', 'gaps', 'recovery', 'copilot'].forEach(t => {
-        document.getElementById('view-' + t).classList.add('hidden');
-        document.getElementById('btn-tab-' + t).classList.remove('bg-[#f4d06f]', 'text-[#0b132b]');
-        document.getElementById('btn-tab-' + t).classList.add('text-slate-300');
-      });
-      document.getElementById('view-' + tabName).classList.remove('hidden');
-      document.getElementById('btn-tab-' + tabName).classList.add('bg-[#f4d06f]', 'text-[#0b132b]');
-      document.getElementById('btn-tab-' + tabName).classList.remove('text-slate-300');
-      if (tabName === 'graph' && cy) {
-        cy.resize();
-        cy.fit();
-      }
+    function node(tag, text, cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;}
+    function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
+    function setView(name){document.querySelectorAll('.view').forEach(v=>v.hidden=v.id!==`view-${name}`);document.querySelectorAll('[data-view]').forEach(b=>{if(b.classList.contains('view-tab'))b.setAttribute('aria-selected',String(b.dataset.view===name));else if(b.dataset.view===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});if(name==='overview'&&state.graph)requestAnimationFrame(()=>{state.graph.resize();state.graph.fit(undefined,28);});}
+    async function loadCases(selectId){
+      try { const cases=await api('/api/cases'); const select=$('case-select'); const keep=selectId||state.caseId; clear(select);
+        if(!cases.length){select.add(new Option('No cases yet',''));state.caseId=null;showNoCase();return;}
+        for(const c of cases)select.add(new Option(`${c.case_number} · ${c.title}`,c.id));
+        const chosen=cases.find(c=>c.id===keep)||cases[0];select.value=chosen.id;await loadCase(chosen.id);
+      } catch(e){showNotice(`Could not load cases: ${e.message}. Open this page from the local MANTIS server at http://localhost:8000/.`);showNoCase();}
     }
-
-    function seedDemoCase() {
-      initCytoscape(DEMO_ELEMENTS);
-      alert("Scenario 1 Loaded: 4 Hops reconstructed from HDFC UPI -> SBI/Axis Mule -> TRON USDT");
+    function showNoCase(){state.caseId=null;$('case-workspace').hidden=true;$('no-case').hidden=false;$('breadcrumb-case').textContent='No case selected';$('page-title').textContent='Investigations';$('page-subtitle').textContent='Create a case and import source records to begin analysis.';}
+    async function loadCase(caseId){
+      clearNotice();state.caseId=caseId;
+      try {
+        const [caseRecord, docs, entities, txPage, runs, audit]=await Promise.all([
+          api(`/api/cases/${encodeURIComponent(caseId)}`),api(`/api/cases/${encodeURIComponent(caseId)}/documents`),
+          api(`/api/cases/${encodeURIComponent(caseId)}/entities`),api(`/api/cases/${encodeURIComponent(caseId)}/transactions?limit=${state.limit}&offset=${state.offset}`),
+          api(`/api/cases/${encodeURIComponent(caseId)}/trace-runs`),
+          api(`/api/cases/${encodeURIComponent(caseId)}/audit`)
+        ]);
+        state.caseRecord=caseRecord;state.documents=docs;state.entities=entities;state.transactions=txPage.items;state.total=txPage.total;state.traceRuns=runs;state.trace=null;
+        $('case-workspace').hidden=false;$('no-case').hidden=true;$('breadcrumb-case').textContent=caseRecord.case_number;$('page-title').textContent=caseRecord.title;$('page-subtitle').textContent=`${caseRecord.case_number}${caseRecord.complaint_ref?` · Ref ${caseRecord.complaint_ref}`:''}`;$('sidebar-case-title').textContent=caseRecord.title;
+        $('metric-docs').textContent=docs.length;$('metric-transfers').textContent=caseRecord.stats.transactions;$('metric-traces').textContent=runs.length;$('metric-episodes').textContent=caseRecord.stats.typologies;
+        renderDocuments();renderTransactions();renderEntities();populateSeedOptions();renderTraceRuns();renderRecentDocuments();renderIndicators([]);renderAudit(audit);
+        if(runs.length){const latest=await api(`/api/cases/${encodeURIComponent(caseId)}/trace-runs/${encodeURIComponent(runs[0].id)}`);state.trace=latest.result;renderTrace(latest.result,latest.id);}
+        else {clearGraph();$('latest-trace').textContent='No trace has been run for this case.';$('trace-depth').textContent='No run';}
+      } catch(e){showNotice(`Could not load case records: ${e.message}`);}
     }
-
-    function askCopilot() {
-      const q = document.getElementById('copilot-input').value;
-      if (!q) return;
-      const chat = document.getElementById('copilot-chat');
-      chat.innerHTML += `<div class="p-2.5 rounded bg-blue-950/40 text-blue-200 border border-blue-900"><strong>Investigator:</strong> ${q}</div>`;
-      
-      // Deterministic answer simulation matching backend API
-      let ans = "Analysis completed across corroborated records.";
-      if (q.includes("largest") || q.includes("top")) {
-        ans = "The 3 largest movements: 550.00 USDT via TRON (Ref: f183c27a...); ₹1,00,000.00 via UPI (Ref: 630211982736); ₹60,000.00 via UPI (Ref: 630211983011).";
-      } else if (q.includes("missing") || q.includes("gap") || q.includes("required")) {
-        ans = "Custody Boundary at 'Krypton P2P Escrow'. Unresolved: ₹49,500.00. Requisition required under Section 94 BNSS 2023 for internal orderbook and KYC.";
-      } else if (q.includes("pattern") || q.includes("suspicious")) {
-        ans = "Detected 2 typologies: 'Rapid Pass-Through' at Ramesh Kumar (SBI, dwell 5.2m) and 'Structuring' at Aman Verma (Axis, ₹49,500).";
-      } else if (q.includes("crypto") || q.includes("usdt")) {
-        ans = "Cross-rail seam identified: ₹49,500 IMPS debit matched with 550.00 USDT credit within 20m @ implied rate ₹90.0/USDT (0.0% market deviation).";
-      }
-
-      chat.innerHTML += `<div class="p-2.5 rounded bg-[#1c2541] text-slate-300 border border-[#2a3a5e]"><strong>MANTIS Copilot:</strong> ${ans}</div>`;
-      document.getElementById('copilot-input').value = '';
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    // Initialize Cytoscape on load
-    window.onload = function() {
-      initCytoscape(DEMO_ELEMENTS);
-    };
+    function renderDocuments(){const body=$('documents-body');clear(body);if(!state.documents.length){body.append(node('tr',''));body.firstChild.append(node('td','No evidence files imported.'));return;}
+      for(const d of state.documents){const tr=node('tr');tr.append(node('td',d.filename),node('td',d.mime),node('td',new Date(d.uploaded_at).toLocaleString()),node('td',d.sha256,'mono'),node('td',d.parse_status,'status-pill '+(d.parse_status==='ok'?'status-observed':'status-review')));const td=node('td');const link=node('button','Download original','button');link.type='button';link.addEventListener('click',()=>downloadOriginal(d));td.append(link);tr.append(td);body.append(tr);}}
+    async function downloadOriginal(doc){try{const headers=new Headers();if(apiKey.value.trim())headers.set('Authorization',`Bearer ${apiKey.value.trim()}`);const response=await fetch(`/api/cases/${encodeURIComponent(state.caseId)}/documents/${encodeURIComponent(doc.id)}/content`,{headers});if(!response.ok)throw new Error(`Download failed (${response.status})`);const url=URL.createObjectURL(await response.blob());const link=document.createElement('a');link.href=url;link.download=doc.filename;link.click();URL.revokeObjectURL(url);}catch(e){showNotice(e.message);}}
+    function renderAudit(audit){const body=$('audit-body');clear(body);$('audit-status').textContent=`Integrity ${audit.integrity} · ${audit.checked_events} checked`;$('audit-status').className=`soft-pill ${audit.integrity==='valid'?'status-observed':'status-review'}`;if(!audit.events.length){const tr=node('tr');tr.append(node('td','No activity recorded.'));body.append(tr);return;}for(const event of audit.events.slice().reverse()){const tr=node('tr');tr.append(node('td',new Date(event.at).toLocaleString()),node('td',event.actor),node('td',event.action),node('td',event.event_hash,'mono'));body.append(tr);}}
+    function renderTransactions(){const body=$('transactions-body');clear(body);$('transaction-count').textContent=`${state.total||0} records`;$('page-indicator').textContent=`Showing ${state.offset+1}–${Math.min(state.offset+state.transactions.length,state.total||0)} of ${state.total||0}`;$('prev-page').disabled=state.offset===0;$('next-page').disabled=state.offset+state.limit>=(state.total||0);
+      if(!state.transactions.length){const tr=node('tr');tr.append(node('td','No transfer records imported.'));body.append(tr);return;}
+      const entityNames=new Map(state.entities.map(e=>[e.id,e.display]));for(const tx of state.transactions){const tr=node('tr');tr.append(node('td',`${new Date(tx.ts_utc).toLocaleString()}${tx.ts_precision==='date'?' · date precision':''}`),node('td',tx.rail),node('td',`${entityNames.get(tx.src_id)||tx.src_id} → ${entityNames.get(tx.dst_id)||tx.dst_id}`),node('td',tx.amount,'amount'),node('td',tx.ref||'—','mono'),node('td',tx.source_filename||'—'));body.append(tr);}}
+    function renderEntities(){const body=$('entities-body');clear(body);if(!state.entities.length){const tr=node('tr');tr.append(node('td','No entities loaded.'));body.append(tr);return;}for(const e of state.entities){const tr=node('tr');tr.append(node('td',e.display),node('td',e.kind),node('td',e.observed?'Yes':'No'),node('td',e.is_custody_boundary?'Possible boundary':'No'),);const action=node('button','Review','button');action.type='button';action.addEventListener('click',()=>editEntity(e));const td=node('td');td.append(action);tr.append(td);body.append(tr);}}
+    function renderRecentDocuments(){const host=$('recent-documents');clear(host);if(!state.documents.length){host.textContent='No files uploaded.';return;}for(const d of state.documents.slice(0,4)){const row=node('div',`${d.filename} · ${d.parse_status}`,'trace-detail');row.style.marginBottom='6px';host.append(row);}}
+    function renderIndicators(items){const host=$('indicator-list');clear(host);if(!items.length){host.append(node('div','Run trace & analysis to calculate configured review indicators.','trace-detail'));return;}for(const item of items){const row=node('div',undefined,'signal');row.append(node('div',item.pattern.replaceAll('_',' '),'signal-name'),node('div',`Heuristic score ${Math.round(item.score*100)}% · ${item.evidence_tx_ids.length} supporting record(s)`,'signal-copy'));host.append(row);}}
+    function populateSeedOptions(){const select=$('seed-transfer');const previous=select.value;clear(select);for(const tx of state.transactions){const option=new Option(`${tx.ts_utc.slice(0,16).replace('T',' ')} · ${tx.amount} · ${tx.rail} · ${tx.ref||tx.id}`,tx.id);select.add(option);}if(previous)select.value=previous;if(!state.transactions.length)select.add(new Option('Import records first',''));}
+    function renderTraceRuns(){const body=$('trace-runs-body');clear(body);if(!state.traceRuns.length){const tr=node('tr');tr.append(node('td','No trace runs stored.'));body.append(tr);return;}for(const run of state.traceRuns){const tr=node('tr');tr.append(node('td',run.id,'mono'),node('td',new Date(run.created_at).toLocaleString()),node('td',run.seed_transfer_id,'mono'),node('td',String(run.hop_depth)),node('td',String(run.transfer_count)));const btn=node('button','Open','button');btn.type='button';btn.addEventListener('click',async()=>{try{const payload=await api(`/api/cases/${encodeURIComponent(state.caseId)}/trace-runs/${encodeURIComponent(run.id)}`);state.trace=payload.result;renderTrace(payload.result,run.id);setView('overview');}catch(e){showNotice(e.message);}});const td=node('td');td.append(btn);tr.append(td);body.append(tr);}}
+    function renderTrace(result,runId){state.trace=result;const trace=result.trace||result;const edges=trace.edges||[];$('trace-depth').textContent=`${trace.hop_depth||0} hops`;$('latest-trace').textContent=`Seed ${trace.seed_transfer_id||result.seed_transfer_id} · ${edges.length} flow records · run ${runId||''}`;$('graph-status').textContent=`${edges.length} trace records`;$('graph-subtitle').textContent=`Seed ${trace.seed_transfer_id||result.seed_transfer_id} · observed transfer edges and candidate associations`;
+      renderIndicators(result.episodes||[]);drawGraph(trace,result.seam_matches||[]);const resultCard=$('analysis-result');clear(resultCard);resultCard.append(node('h3',`Trace complete · ${trace.hop_depth||0} hops`));resultCard.append(node('p',`${edges.length} observed transfer record(s) included. Seed: ${trace.seed_transfer_id||result.seed_transfer_id}.`,'trace-detail'));resultCard.append(node('p',result.market_fx_rate_status||`Market rate: ${result.market_fx_rate??'not supplied'}; seam candidates: ${(result.seam_matches||[]).length}.`,'trace-detail'));if(result.episodes?.length)for(const ep of result.episodes)resultCard.append(node('div',`${ep.pattern.replaceAll('_',' ')} · heuristic score ${Math.round(ep.score*100)}% · evidence ${ep.evidence_tx_ids.join(', ')}`,'signal-copy'));}
+    function drawGraph(trace,seams){const cyHost=$('cy');$('graph-empty').hidden=true;cyHost.hidden=false;if(state.graph){state.graph.destroy();state.graph=null;}if(typeof cytoscape==='undefined'){cyHost.hidden=true;$('graph-empty').hidden=false;$('graph-empty').textContent='Graph library unavailable. Check the connection and reload.';return;}
+      const entityMap=new Map(state.entities.map(e=>[e.id,e]));const txMap=new Map(state.transactions.map(tx=>[tx.id,tx]));const nodes=new Map();const edges=[];for(const item of (trace.edges||[])){for(const id of [item.source,item.target]){const e=entityMap.get(id);nodes.set(id,{data:{id,label:e?.display||id,kind:e?.kind||'unknown'}});}edges.push({data:{id:`flow_${item.id}`,source:item.source,target:item.target,label:`${item.amount} · ${item.rail}`,edge_class:'flow'}});}
+      for(const seam of seams){const fiat=txMap.get(seam.fiat_transfer_id);const crypto=txMap.get(seam.chain_transfer_id);if(!fiat||!crypto)continue;for(const id of [fiat.src_id,crypto.dst_id]){const e=entityMap.get(id);nodes.set(id,{data:{id,label:e?.display||id,kind:e?.kind||'unknown'}});}edges.push({data:{id:`seam_${seam.id}`,source:fiat.src_id,target:crypto.dst_id,label:`Candidate · ${seam.score.toFixed(2)}`,edge_class:'seam'}});}
+      if(!edges.length){cyHost.hidden=true;$('graph-empty').hidden=false;$('graph-empty').innerHTML='<strong>No downstream transfers found</strong><span>The selected seed has no linked later records under current time and asset rules.</span>';return;}
+      state.graph=cytoscape({container:cyHost,elements:{nodes:[...nodes.values()],edges},style:[
+        {selector:'node',style:{'label':'data(label)','text-wrap':'wrap','text-max-width':125,'text-valign':'center','text-halign':'center','font-family':'Segoe UI, sans-serif','font-size':10,'font-weight':600,'color':'#26362e','width':145,'height':56,'shape':'round-rectangle','background-color':'#fff','border-width':1.5,'border-color':'#cbd6cc','padding':5}},
+        {selector:'node[kind="bank_account"]',style:{'background-color':'#e8f1e9','border-color':'#6e9677'}},{selector:'node[kind="unknown"]',style:{'background-color':'#fbf5eb','border-color':'#c59a5c'}},{selector:'node[kind="exchange"],node[kind="service"]',style:{'background-color':'#f3eadc','border-color':'#a77b45','border-style':'dashed'}},{selector:'node[kind="wallet"]',style:{'background-color':'#eaf1f4','border-color':'#7995a5'}},
+        {selector:'edge',style:{'width':1.7,'line-color':'#82928a','target-arrow-color':'#82928a','target-arrow-shape':'triangle','curve-style':'bezier','label':'data(label)','font-family':'Segoe UI, sans-serif','font-size':8,'font-weight':600,'color':'#4c5e53','text-background-color':'#fafbf9','text-background-opacity':1,'text-background-padding':3}},
+        {selector:'edge[edge_class="seam"]',style:{'line-color':'#a76522','target-arrow-color':'#a76522','line-style':'dashed','width':2.2,'color':'#85531e'}},{selector:'node:selected',style:{'border-width':3,'border-color':'#38664a'}}
+      ],layout:{name:'breadthfirst',directed:true,padding:25,spacingFactor:1.25,avoidOverlap:true,animate:false}});
+      state.graph.on('tap','node',ev=>{$('inspect-label').textContent=ev.target.data('label');$('inspect-action').textContent='Case entity record';});state.graph.on('tap','edge',ev=>{$('inspect-label').textContent=ev.target.data('label');$('inspect-action').textContent=ev.target.data('edge_class')==='seam'?'Candidate association · review evidence':'Transfer from uploaded source';});}
+    async function submitCase(event){event.preventDefault();clearNotice();const form=new FormData(event.target);const payload=Object.fromEntries(form.entries());try{const result=await api('/api/cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});$('case-dialog').close();event.target.reset();await loadCases(result.id);setView('evidence');}catch(e){showNotice(`Could not create case: ${e.message}`);}}
+    async function uploadFile(event,endpoint){event.preventDefault();if(!state.caseId){showNotice('Select a case before importing evidence.');return;}const form=new FormData(event.target);const button=event.submitter;button.disabled=true;clearNotice();try{const result=await api(`/api/cases/${encodeURIComponent(state.caseId)}/ingest/${endpoint}`,{method:'POST',body:form});showNotice(`Imported ${result.transactions_imported??0} transfer record(s). SHA-256: ${result.sha256}`, 'info');event.target.reset();state.offset=0;await loadCase(state.caseId);setView('evidence');}catch(e){showNotice(`Import failed: ${e.message}`);}finally{button.disabled=false;}}
+    async function runTrace(event){event.preventDefault();if(!state.caseId)return;const seed=$('seed-transfer').value;if(!seed){showNotice('Select a seed transfer record.');return;}const button=event.submitter;button.disabled=true;clearNotice();const rate=$('fx-rate').value;const body={seed_transfer_id:seed};if(rate)body.market_fx_rate=Number(rate);try{const result=await api(`/api/cases/${encodeURIComponent(state.caseId)}/trace`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});state.trace=result;await loadCase(state.caseId);state.trace=result;renderTrace(result,result.trace_run_id);setView('overview');}catch(e){showNotice(`Trace failed: ${e.message}`);}finally{button.disabled=false;}}
+    async function queryCase(event){event.preventDefault();const question=$('query-input').value.trim();if(!question||!state.caseId)return;appendMessage('You',question,true);$('query-input').value='';try{const result=await api(`/api/cases/${encodeURIComponent(state.caseId)}/copilot`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question})});appendMessage('MANTIS · stored records',`${result.answer}\n\nSource IDs: ${(result.cited_tx_ids||[]).join(', ')||'None'}\nLimitations: ${result.limitations||'Not stated'}`,false);}catch(e){showNotice(`Query failed: ${e.message}`);}}
+    function appendMessage(label,text,isUser){const message=node('div',undefined,`message${isUser?' user':''}`);message.append(node('span',label,'message-label'),document.createTextNode(text));$('chat').append(message);$('chat').scrollTop=$('chat').scrollHeight;}
+    function editEntity(entity){$('entity-id').value=entity.id;$('entity-display').value=entity.display;$('entity-kind').value=entity.kind;$('entity-boundary').checked=entity.is_custody_boundary;$('entity-dialog').showModal();}
+    async function saveEntity(event){event.preventDefault();const id=$('entity-id').value;const payload={display:$('entity-display').value,kind:$('entity-kind').value,is_custody_boundary:$('entity-boundary').checked};try{await api(`/api/cases/${encodeURIComponent(state.caseId)}/entities/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});$('entity-dialog').close();await loadCase(state.caseId);setView('entities');}catch(e){showNotice(`Could not update entity: ${e.message}`);}}
+    async function pageTransactions(direction){state.offset=Math.max(0,state.offset+direction*state.limit);try{const page=await api(`/api/cases/${encodeURIComponent(state.caseId)}/transactions?limit=${state.limit}&offset=${state.offset}`);state.transactions=page.items;state.total=page.total;renderTransactions();populateSeedOptions();}catch(e){showNotice(e.message);}}
+    $('new-case-open').addEventListener('click',()=>$('case-dialog').showModal());$('empty-create').addEventListener('click',()=>$('case-dialog').showModal());$('case-cancel').addEventListener('click',()=>$('case-dialog').close());$('case-form').addEventListener('submit',submitCase);
+    $('entity-cancel').addEventListener('click',()=>$('entity-dialog').close());$('entity-form').addEventListener('submit',saveEntity);
+    $('case-select').addEventListener('change',event=>event.target.value&&loadCase(event.target.value));$('csv-form').addEventListener('submit',event=>uploadFile(event,'csv'));$('chain-form').addEventListener('submit',event=>uploadFile(event,'tron-json'));$('trace-form').addEventListener('submit',runTrace);$('query-form').addEventListener('submit',queryCase);
+    $('prev-page').addEventListener('click',()=>pageTransactions(-1));$('next-page').addEventListener('click',()=>pageTransactions(1));$('refresh-evidence').addEventListener('click',()=>state.caseId&&loadCase(state.caseId));document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));document.querySelectorAll('[data-go]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.go)));
+    loadCases();
   </script>
 </body>
 </html>

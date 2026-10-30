@@ -8,6 +8,8 @@ __pycache__/
 *.db-shm
 *.db-wal
 mantis.db
+evidence/
+.mantis-runtime/
 
 # Virtual environments
 venv/
