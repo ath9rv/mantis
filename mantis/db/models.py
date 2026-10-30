@@ -7,7 +7,7 @@ Supports JSON serialization for both SQLite and PostgreSQL.
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, String, Integer, Float, Boolean, DateTime,
+    Column, String, Integer, BigInteger, Float, Boolean, DateTime,
     Text, ForeignKey, Index
 )
 from sqlalchemy.orm import relationship
@@ -50,13 +50,13 @@ class StatementReconciliationDB(Base):
     id = Column(String(64), primary_key=True, default=lambda: f"rec_{uuid.uuid4().hex[:12]}")
     document_id = Column(String(64), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     account_identifier = Column(String(128), nullable=False)
-    opening_balance_minor = Column(Integer, nullable=False)
-    closing_balance_minor = Column(Integer, nullable=False)
-    calculated_balance_minor = Column(Integer, nullable=False)
-    total_credits_minor = Column(Integer, nullable=False)
-    total_debits_minor = Column(Integer, nullable=False)
+    opening_balance_minor = Column(BigInteger, nullable=False)
+    closing_balance_minor = Column(BigInteger, nullable=False)
+    calculated_balance_minor = Column(BigInteger, nullable=False)
+    total_credits_minor = Column(BigInteger, nullable=False)
+    total_debits_minor = Column(BigInteger, nullable=False)
     reconciled = Column(Boolean, nullable=False, default=False)
-    error_margin_minor = Column(Integer, nullable=False, default=0)
+    error_margin_minor = Column(BigInteger, nullable=False, default=0)
 
 class EntityDB(Base):
     __tablename__ = "entities"
@@ -86,7 +86,7 @@ class TransferDB(Base):
     src_id = Column(String(64), nullable=False)
     dst_id = Column(String(64), nullable=False)
     asset = Column(String(32), nullable=False, default="INR")
-    amount_minor = Column(Integer, nullable=False)
+    amount_minor = Column(BigInteger, nullable=False)
     decimals = Column(Integer, nullable=False, default=2)
     ts_utc = Column(DateTime, nullable=False)
     ts_precision = Column(String(16), nullable=False, default="minute")
@@ -109,8 +109,8 @@ class SeamMatchDB(Base):
     label = Column(String(32), nullable=False, default="inferred")
     confidence_score = Column(Float, nullable=False)
     delta_t_seconds = Column(Integer, nullable=False)
-    inr_amount_minor = Column(Integer, nullable=False)
-    usdt_amount_minor = Column(Integer, nullable=False)
+    inr_amount_minor = Column(BigInteger, nullable=False)
+    usdt_amount_minor = Column(BigInteger, nullable=False)
     implied_rate = Column(Float, nullable=False)
     deviation_pct = Column(Float, nullable=False)
     assigned_vasp = Column(String(128), nullable=True)

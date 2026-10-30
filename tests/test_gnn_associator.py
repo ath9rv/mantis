@@ -1,17 +1,12 @@
 # tests/test_gnn_associator.py
-"""Tests for the GNNAssociator stub.
-
-The stub returns a deterministic fallback score of 0.5 when no model is loaded.
-We verify that the class can be instantiated and that ``score_edge`` returns the
-expected value for a minimal edge dictionary.
-"""
+"""Tests for safe unavailable behavior before a trained model is configured."""
 
 import datetime
 
 from mantis.graph.gnn_associator import GNNAssociator
 
 
-def test_gnn_associator_fallback_score():
+def test_gnn_associator_does_not_invent_a_fallback_score(monkeypatch):
     # Create a dummy edge with minimal required fields.
     edge = {
         "ref": "tx_dummy",
@@ -19,7 +14,14 @@ def test_gnn_associator_fallback_score():
         "rail": "CRYPTO",
         "ts_utc": datetime.datetime(2024, 1, 1, 0, 0, tzinfo=datetime.timezone.utc),
     }
-    assoc = GNNAssociator()  # No model path → fallback mode.
+    assoc = GNNAssociator()  # No model path → scoring is unavailable.
+    monkeypatch.setattr(assoc, "_audit", lambda payload: None)
     score = assoc.score_edge(edge)
-    assert isinstance(score, float)
-    assert score == 0.5
+    assert score is None
+
+
+def test_gnn_associator_batch_unavailable_and_invalid_features(monkeypatch):
+    assoc = GNNAssociator()
+    monkeypatch.setattr(assoc, "_audit", lambda payload: None)
+    scores = assoc.score_batch([{"ref": "valid", "amount_minor": 5}, {"ref": "bad", "amount_minor": "bad"}])
+    assert scores == [None, None]

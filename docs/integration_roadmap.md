@@ -22,7 +22,7 @@ This document maps the most valuable capabilities from identified competitor/ana
 |---------------|------------------------|----------------------|
 | `intelligence/typologies.py` | Change‑address detection & address‑reuse scoring (Chainalysis) | Add functions `detect_change_address` and `score_address_reuse` using transaction metadata; expose via new API endpoint `/typology/address_reuse`.
 | `correlation/record_linkage.py` | Multi‑source Bayesian entity resolution (Quantexa) | Replace Fellegi‑Sunter with a simple factor graph using `pgmpy`; fallback to existing matcher for low‑confidence cases.
-| `graph/gnn_associator.py` *(new)* | GNN‑based edge scoring (Palantir) | Stub class `GNNAssociator` that loads a Torch model (CPU‑only) and provides `score_edge(edge)`; later pipeline will call this after `seam_solver` to re‑rank matches.
+| `graph/gnn_associator.py` | Optional GNN integration point | Scoring remains unavailable until a compatible TorchScript model, documented feature pipeline, labeled benchmark, calibration, and independent validation exist. Do not use it to re-rank investigation leads yet.
 | `web/index.html` | Timeline UI, event annotations (GO.Data) | Add a timeline control (e.g., `<input type="range">`) that filters graph edges by timestamp; overlay event tags from typology detectors.
 | `ingest/blockchain` (future) | Real‑time on‑chain ingestion (Tron/Etherscan) | Implement adapters `TronGridAdapter` and `EtherscanAdapter` respecting rate limits from research subagent; store raw on‑chain payloads in `BlockDataDB`.
 | `intelligence/flow_anomaly.py` (future) | Sequence‑level attention anomaly (FlowShield) | New detector class using PyTorch `nn.TransformerEncoder` over transaction sequences.
@@ -31,7 +31,7 @@ This document maps the most valuable capabilities from identified competitor/ana
 ## Legal & Operational Constraints
 | Constraint | Affected Feature | Mitigation |
 |-----------|------------------|------------|
-| **BSA §63 hash‑manifest** | Bulk GNN scoring (potentially large batch) | After each batch, insert an `AuditLogDB` entry with SHA‑256 of the processed payload (as required by Section 63 BSA). |
+| Audit integrity | Batch analysis | Record analysis inputs and outputs in the application audit format. Hash links provide database-level tamper evidence only; do not claim statutory compliance without legal review and an externally anchored signed record.
 | **DPDP Act 2023** (data‑privacy) | Ingestion of personal bank statements | Anonymise PII (account numbers, names) before persisting; store original encrypted blob separate from analysis DB.
 | **RBI freeze rules** | Automated freeze requests (gap planner) | Ensure any generated statutory notice is a *draft*; actual freeze must be manually authorised by a compliance officer.
 | **API rate limits** (Tron/Etherscan) | Real‑time blockchain ingestion | Implement exponential back‑off and token‑bucket throttling per the limits discovered by the research subagent.
@@ -48,12 +48,12 @@ This document maps the most valuable capabilities from identified competitor/ana
 | **P6** | FlowShield‑style anomaly detector | 3 | 4 | 12 |
 | **P7** | Kuzu graph backend (optional) | 2 | 5 | 10 |
 
-*We will start with **P1** (GNN associator) because it offers the highest combined impact/effort and creates a flexible foundation for later ML‑driven enhancements.*
+*Prioritize a labeled, reproducible evaluation set and stable feature definitions before choosing a learned scorer. A model without representative labels and calibration can make the system less reliable.*
 
 ---
 **Next Steps**
-1. Implement the GNN stub (`mantis/graph/gnn_associator.py`).
-2. Add unit test under `tests/`.
-3. Update `requirements.txt` with `torch` (CPU‑only). 
-4. Commit on a new branch `feature/gnn-associator` and push.
-5. Continue fleshing out the roadmap items as research results arrive.
+1. Define a reviewed, legally sourced labeled benchmark with train/validation/holdout splits.
+2. Version feature extraction and run leakage checks before model selection.
+3. Compare transparent rules and calibrated baselines against any graph model using precision/recall, calibration, subgroup error, and runtime.
+4. Keep model inference out of investigator decisions until an independent review approves thresholds and failure handling.
+5. Continue roadmap work only where data, operational ownership, and evidence provenance are defined.

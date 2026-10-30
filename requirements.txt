@@ -2,7 +2,7 @@ fastapi>=0.115,<1
 uvicorn[standard]>=0.30,<1
 pydantic>=2.7,<3
 sqlalchemy>=2.0,<3
+alembic>=1.13,<2
 networkx>=3.2,<4
 python-multipart>=0.0.9,<1
-torch>=2.2.0,<3
 # Optional dependency for extract.py: python-docx

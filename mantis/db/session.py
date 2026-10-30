@@ -5,7 +5,7 @@ Enables WAL mode on SQLite for concurrent local reads and writes.
 """
 
 import os
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mantis.db")
@@ -37,7 +37,9 @@ def get_db():
         db.close()
 
 def init_db():
-    """Create missing tables and add non-destructive query indexes."""
+    """Bootstrap an unversioned local schema; Alembic owns versioned schemas."""
+    if "alembic_version" in inspect(engine).get_table_names():
+        return
     Base.metadata.create_all(bind=engine)
     for table in Base.metadata.tables.values():
         for index in table.indexes:

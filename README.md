@@ -21,14 +21,14 @@ For API users, interactive documentation is at <http://127.0.0.1:8000/docs>. Exa
 1. `POST /api/cases` to create a case.
 2. `POST /api/cases/{case_id}/ingest/csv` or `/ingest/tron-json` using multipart form data.
 3. `GET /api/cases/{case_id}/transactions` to select a seed transfer.
-4. `POST /api/cases/{case_id}/trace` with `{"seed_transfer_id":"..."}`. An optional investigator-supplied `market_fx_rate` enables fiat/USDT candidate matching; without it, MANTIS does not invent a rate.
+4. `POST /api/cases/{case_id}/trace` with `{"seed_transfer_id":"..."}`. An optional investigator-supplied `market_fx_rate` enables fiat/USDT candidate matching; when supplied, include `market_fx_source` and timezone-aware `market_fx_observed_at` (for example, `2026-10-30T06:00:00Z`). Without a rate, MANTIS does not invent one.
 5. `GET /api/cases/{case_id}/trace-runs` and `/audit` to review saved analysis and activity.
 
 ## Operating configuration
 
 The default server binds to loopback only. Set a strong `MANTIS_API_KEY` before binding to a non-local interface; the key is a shared bearer credential protecting API routes, not individual investigator accounts or case-level authorization. The cockpit accepts it in the top bar and keeps it in that browser tab's session storage.
 
-For a PostgreSQL database, first install `python -m pip install -r requirements-postgres.txt`, then set `DATABASE_URL` to a SQLAlchemy PostgreSQL URL.
+For a PostgreSQL database, first install `python -m pip install -r requirements-postgres.txt`, then set `DATABASE_URL` to a SQLAlchemy PostgreSQL URL. Before using or upgrading an existing PostgreSQL workspace, run `python manage.py db-upgrade`; this applies the versioned schema migrations, including 64-bit monetary storage.
 
 Useful environment variables:
 
@@ -51,6 +51,7 @@ The optional `python manage.py seed` command creates synthetic development fixtu
 - Similar narration is not treated as proof of shared identity. Rows without a stable reference stay separate unresolved entities.
 - Traces are time-ordered graph walks over recorded transactions. They do not allocate mixed account balances or compute taint residuals.
 - Fiat/crypto matches and typology indicators are candidate leads based on configurable heuristics. Scores are not calibrated probabilities or findings.
+- The optional GNN integration does not score cases until a compatible trained TorchScript model, documented feature pipeline, and reviewed evaluation set are configured; unavailable scores are shown as unavailable. Install `requirements-ml.txt` only for ML development.
 - The case activity log uses per-case SHA-256 links and reports whether the stored chain is internally consistent. A database administrator can rewrite the database and recompute hashes; this is not external immutable storage, a digital signature, or a legally sufficient chain-of-custody service.
 - The recovery endpoint stays unavailable until the system stores independently verified balances and a defensible residual-taint calculation.
 

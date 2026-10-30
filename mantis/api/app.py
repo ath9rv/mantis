@@ -12,6 +12,7 @@ import uuid
 import hashlib
 import hmac
 import math
+from dataclasses import asdict
 from urllib.parse import quote
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
@@ -20,7 +21,7 @@ from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Que
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from mantis.config import MantisConfig
 from mantis.db.session import get_db, init_db
@@ -95,8 +96,24 @@ class CopilotQueryRequest(BaseModel):
     question: str
 
 class TraceRequest(BaseModel):
-    seed_transfer_id: str
-    market_fx_rate: Optional[float] = None
+    seed_transfer_id: str = Field(min_length=1, max_length=64)
+    market_fx_rate: Optional[float] = Field(default=None, gt=0, allow_inf_nan=False)
+    market_fx_source: Optional[str] = Field(default=None, max_length=512)
+    market_fx_observed_at: Optional[datetime] = None
+
+    @model_validator(mode="after")
+    def validate_fx_provenance(self):
+        source = (self.market_fx_source or "").strip()
+        if self.market_fx_rate is None:
+            if source or self.market_fx_observed_at is not None:
+                raise ValueError("FX source and observation time require a market_fx_rate")
+            return self
+        if not source:
+            raise ValueError("market_fx_source is required when a market_fx_rate is supplied")
+        if self.market_fx_observed_at is None or self.market_fx_observed_at.tzinfo is None or self.market_fx_observed_at.utcoffset() is None:
+            raise ValueError("market_fx_observed_at must be a timezone-aware timestamp")
+        self.market_fx_source = source
+        return self
 
 class EntityUpdateRequest(BaseModel):
     display: Optional[str] = None
@@ -120,6 +137,11 @@ def format_minor(amount_minor: int, decimals: int, asset: str) -> str:
     from decimal import Decimal
     value = Decimal(amount_minor) / (Decimal(10) ** decimals)
     return f"₹{value:,.2f}" if asset.upper() == "INR" else f"{value:,.{min(decimals, 8)}f} {asset.upper()}"
+
+def stable_sha256(payload: Any) -> str:
+    """Hash a JSON-compatible value using a stable UTF-8 representation."""
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 # ---------------------------------------------------------------------------
 # CASE MANAGEMENT ENDPOINTS
@@ -554,6 +576,28 @@ def execute_trace(case_id: str, req: TraceRequest, db: Session = Depends(get_db)
     ) for t in tx_records]
     canonical_by_id = {tx.id: tx for tx in canonical_txs}
     seed = canonical_by_id[req.seed_transfer_id]
+    input_snapshot = [{
+        "id": tx.id, "rail": tx.rail.value, "source": tx.src_id, "target": tx.dst_id,
+        "asset": tx.asset, "amount_minor": tx.amount_minor, "decimals": tx.decimals,
+        "ts_utc": tx.ts_utc.isoformat(), "ts_precision": tx.ts_precision,
+        "ref": tx.ref, "ref_kind": tx.ref_kind, "corroboration": tx.corroboration,
+        "raw_unmapped_data": tx.raw_unmapped_data, "source_doc_hash": tx.source_doc_hash,
+    } for tx in sorted(canonical_txs, key=lambda item: (item.id, item.ts_utc))]
+    config_snapshot = asdict(config)
+    analysis_manifest = {
+        "schema": "mantis.analysis-manifest.v1",
+        "algorithm_bundle": "mantis-default-analysis-v1",
+        "trace_strategy": "time_respecting_breadth_first_v1",
+        "seam_solver": "time_value_constrained_matching_v1",
+        "typology_rules": ["rapid_pass_through_v1", "structuring_v1", "peel_chain_v1"],
+        "input_transfer_count": len(input_snapshot),
+        "input_snapshot_sha256": stable_sha256(input_snapshot),
+        "source_document_sha256": sorted({
+            tx.source_doc_hash for tx in canonical_txs if tx.source_doc_hash
+        }),
+        "configuration_sha256": stable_sha256(config_snapshot),
+    }
+    analysis_manifest["manifest_sha256"] = stable_sha256(analysis_manifest)
     trace_result = MultiStrategyTracer(config.tracer).trace_forward(seed, canonical_txs)
 
     entity_kinds = {e.id: e.kind for e in db.query(EntityDB).filter(EntityDB.case_id == case_id).all()}
@@ -562,6 +606,13 @@ def execute_trace(case_id: str, req: TraceRequest, db: Session = Depends(get_db)
     seam_matches = MultiRailSeamSolver(config.seam).solve_matches(
         fiat_debits, crypto_credits, market_fx_rate=req.market_fx_rate
     )
+    # A seeded analysis only presents cross-rail candidates incident to that
+    # exact transfer. Other candidates remain available through separate runs.
+    seam_matches = [sm for sm in seam_matches if seed.id in {sm.fiat_transfer_id, sm.chain_transfer_id}]
+
+    # The case-level seam table represents the latest analysis state. Historical
+    # runs retain their own full results in TraceRunDB.result_json.
+    db.query(SeamMatchDB).filter(SeamMatchDB.case_id == case_id).delete(synchronize_session=False)
 
     for sm in seam_matches:
         existing = db.query(SeamMatchDB).filter(SeamMatchDB.case_id == case_id, SeamMatchDB.id == sm.id).first()
@@ -634,11 +685,19 @@ def execute_trace(case_id: str, req: TraceRequest, db: Session = Depends(get_db)
         "seam_matches": seam_payload,
         "episodes": episode_payload,
         "market_fx_rate": req.market_fx_rate,
+        "market_fx_source": req.market_fx_source,
+        "market_fx_observed_at": req.market_fx_observed_at.astimezone(timezone.utc).isoformat()
+        if req.market_fx_observed_at else None,
+        "analysis_manifest": analysis_manifest,
     }
     db.add(TraceRunDB(id=run_id, case_id=case_id, seed_transfer_id=seed.id, result_json=json.dumps(trace_payload)))
     append_audit(db, case_id, "analysis.trace_run", {
         "trace_run_id": run_id, "seed_transfer_id": seed.id,
+        "analysis_manifest_sha256": analysis_manifest["manifest_sha256"],
         "market_fx_rate": req.market_fx_rate,
+        "market_fx_source": req.market_fx_source,
+        "market_fx_observed_at": req.market_fx_observed_at.astimezone(timezone.utc).isoformat()
+        if req.market_fx_observed_at else None,
         "flow_edge_count": len(serialized_edges), "seam_candidate_count": len(seam_payload),
         "indicator_count": len(episode_payload),
     })
@@ -651,6 +710,10 @@ def execute_trace(case_id: str, req: TraceRequest, db: Session = Depends(get_db)
         "seam_matches": seam_payload,
         "episodes": episode_payload,
         "market_fx_rate": req.market_fx_rate,
+        "market_fx_source": req.market_fx_source,
+        "market_fx_observed_at": req.market_fx_observed_at.astimezone(timezone.utc).isoformat()
+        if req.market_fx_observed_at else None,
+        "analysis_manifest": analysis_manifest,
         "market_fx_rate_status": "investigator_supplied" if req.market_fx_rate is not None else "not_supplied; no FX seam candidates generated",
         "seam_matches_count": len(seam_matches),
         "episodes_detected_count": len(detected_episodes)

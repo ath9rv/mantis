@@ -1,12 +1,8 @@
-"""
-MANTIS AI Investigation Copilot Grounded Query Engine
-Enforces the core rule: "The AI never computes or invents a financial fact."
-Translates investigator queries into deterministic database & graph lookups.
-Every response cites exact transaction IDs, entity displays, confidence metrics, and legal limitations.
-"""
+"""Deterministic case-record query engine with source IDs and limitations."""
 
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
+from decimal import Decimal
 import re
 from mantis.core.models import CanonicalTransaction, FlowEdge, SeamEdge, Episode, InvestigationDataRequest
 
@@ -56,18 +52,26 @@ class GroundedCopilotQuerier:
             return self._query_summary()
 
     def _query_summary(self) -> Dict[str, Any]:
-        total_inr = sum(t.amount_minor for t in self.transactions if t.asset == "INR") / 100.0
-        total_usdt = sum(t.amount_minor for t in self.transactions if t.asset == "USDT") / 1e6
+        inr_rows = [t for t in self.transactions if t.asset.upper() == "INR"]
+        usdt_rows = [t for t in self.transactions if t.asset.upper() == "USDT"]
+        total_inr = sum(
+            (Decimal(t.amount_minor) / (Decimal(10) ** t.decimals) for t in inr_rows), Decimal(0)
+        )
+        total_usdt = sum(
+            (Decimal(t.amount_minor) / (Decimal(10) ** t.decimals) for t in usdt_rows), Decimal(0)
+        )
+        usdt_places = max((t.decimals for t in usdt_rows), default=6)
+        ordered = sorted(self.transactions, key=lambda t: (t.ts_utc, t.id))
         return {
             "answer": (
-                f"Investigation Summary: Reconstructed {len(self.transactions)} total transactions "
-                f"across {len(self.flow_edges)} flow hops and {len(self.seam_edges)} cross-rail seam matches. "
-                f"Observed Fiat Volume: ₹{total_inr:,.2f}; Observed USDT Volume: {total_usdt:,.2f} USDT. "
-                f"Detected {len(self.episodes)} suspicious typology episodes."
+                f"Case records contain {len(self.transactions)} transfer rows, {len(self.flow_edges)} stored flow edges, "
+                f"{len(self.seam_edges)} candidate cross-rail links, and {len(self.episodes)} heuristic indicators. "
+                f"Gross observed row volume: ₹{total_inr:,.2f} and {total_usdt:,.{usdt_places}f} USDT. "
+                "Gross volume counts each recorded movement and may count the same value again at later hops."
             ),
-            "cited_tx_ids": [t.id for t in self.transactions[:5]],
+            "cited_tx_ids": [t.id for t in ordered[:10]],
             "confidence": "Summary of stored records",
-            "limitations": "Subject to completeness of uploaded statements and on-chain feeds."
+            "limitations": "Source completeness is unknown. Gross row volume is not unique principal, loss, balance, or recoverable value."
         }
 
     def _query_gaps(self) -> Dict[str, Any]:
@@ -79,12 +83,21 @@ class GroundedCopilotQuerier:
                 "limitations": "Absence of a stored request does not establish that the trail is complete."
             }
 
-        req = self.gap_requests[0]
+        priority = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        requests = sorted(
+            self.gap_requests,
+            key=lambda item: (priority.get(item.urgency.casefold(), 4), item.id),
+        )[:5]
+        summaries = [
+            f"{req.target_institution} / {req.custody_account_or_wallet}: {req.unresolved_amount_formatted} ({req.urgency})"
+            for req in requests
+        ]
+        req = requests[0]
         return {
             "answer": (
-                f"A stored record identifies a possible custody boundary at '{req.target_institution}' (Ref: {req.custody_account_or_wallet}). "
-                f"Unresolved Amount: {req.unresolved_amount_formatted}. "
-                f"Review whether a records request is authorized under {req.statutory_basis}: {', '.join(req.asks[:3])}."
+                f"Stored review requests ({len(self.gap_requests)} total; showing {len(requests)}): "
+                f"{'; '.join(summaries)}. For the highest-priority draft, review the proposed basis "
+                f"({req.statutory_basis}) and requested records: {', '.join(req.asks[:3])}."
             ),
             "gap_request_id": req.id,
             "statutory_basis": req.statutory_basis,
@@ -102,15 +115,23 @@ class GroundedCopilotQuerier:
                 "limitations": "Analysis may not have been run, and absence of a stored episode does not clear activity."
             }
 
-        ep = self.episodes[0]
-        alt = ep.benign_hypotheses[0]["explanation"] if ep.benign_hypotheses else "N/A"
+        episodes = sorted(self.episodes, key=lambda ep: (-ep.confidence, ep.pattern, ep.entity_id))[:5]
+        summaries = []
+        citations = []
+        for ep in episodes:
+            alt = ep.benign_hypotheses[0]["explanation"] if ep.benign_hypotheses else "No alternative recorded"
+            summaries.append(
+                f"{ep.pattern} at {ep.entity_id} (heuristic score {ep.confidence:.3f}/1; "
+                f"evidence {', '.join(ep.evidence_tx_ids)}; alternative: {alt})"
+            )
+            citations.extend(ep.evidence_tx_ids)
         return {
             "answer": (
-                f"Detected pattern: '{ep.pattern}' at entity '{ep.entity_id}' with heuristic score {ep.confidence * 100:.1f}%. "
-                f"Key Metrics: {ep.metrics}. Alternative Benign Hypothesis: {alt}."
+                f"Stored heuristic indicators ({len(self.episodes)} total; showing {len(episodes)}): "
+                f"{'; '.join(summaries)}."
             ),
-            "cited_tx_ids": ep.evidence_tx_ids,
-            "confidence": f"{ep.confidence * 100:.1f}%",
+            "cited_tx_ids": list(dict.fromkeys(citations)),
+            "confidence": "Uncalibrated heuristic indicators",
             "limitations": "Heuristic score is not a calibrated probability. Indicator only; does not establish criminal guilt."
         }
 
@@ -138,18 +159,21 @@ class GroundedCopilotQuerier:
                 "answer": "No fiat-to-crypto seam match is stored in the currently available case records.",
                 "cited_tx_ids": [],
                 "confidence": "None",
-                "limitations": "Fiat records may not have reached a P2P on-ramp."
+                "limitations": "No stored candidate may mean missing inputs, no investigator-supplied FX rate, or no pair met configured rules."
             }
 
-        seam = self.seam_edges[0]
+        seams = sorted(self.seam_edges, key=lambda item: (-item.score, item.delta_t_seconds, item.id))[:5]
+        summaries = [f"{seam.reason} (solver score {seam.score:.3f}/1; label {seam.label.value})" for seam in seams]
         return {
             "answer": (
-                f"Cross-Rail Seam Link: {seam.reason}. "
-                f"Solver score {seam.score * 100:.1f}%. Label: {seam.label.value}."
+                f"Stored cross-rail candidates ({len(self.seam_edges)} total; showing {len(seams)}): "
+                f"{'; '.join(summaries)}."
             ),
-            "cited_tx_ids": [seam.fiat_transfer_id, seam.chain_transfer_id],
-            "confidence": f"Solver score {seam.score * 100:.1f}% ({seam.label.value})",
-            "limitations": "Candidate match based on constrained bipartite solver; requires VASP confirmation for absolute proof."
+            "cited_tx_ids": list(dict.fromkeys(
+                transfer_id for seam in seams for transfer_id in (seam.fiat_transfer_id, seam.chain_transfer_id)
+            )),
+            "confidence": "Uncalibrated solver ranking",
+            "limitations": "These are candidates from configured rules, not identity or payment proof; request independent provider records."
         }
 
     def _query_time_window(self, question: str) -> Dict[str, Any]:
@@ -177,12 +201,25 @@ class GroundedCopilotQuerier:
         }
 
     def _query_evidence(self, question: str) -> Dict[str, Any]:
-        for edge in self.flow_edges:
-            if edge.evidence_reason:
-                return {
-                    "answer": f"Evidence for connection {edge.source} -> {edge.target}: {edge.evidence_reason}. Label: {edge.label.value}.",
-                    "cited_tx_ids": [edge.transfer.id],
-                    "confidence": edge.label.value,
-                    "limitations": "This cites the stored transfer record; the application does not currently provide a tamper-evident audit trail."
-                }
-        return {"answer": "No explicit edge evidence found.", "cited_tx_ids": [], "confidence": "Low", "limitations": ""}
+        requested = re.findall(r"\b(?:tx|chain)_[a-z0-9_-]+\b|\b[0-9a-f]{64}\b", question.lower())
+        edges = [edge for edge in self.flow_edges if edge.evidence_reason]
+        if requested:
+            wanted = set(requested)
+            edges = [edge for edge in edges if edge.transfer.id.lower() in wanted or (edge.transfer.ref or "").lower() in wanted]
+        edges = sorted(edges, key=lambda edge: (edge.transfer.ts_utc, edge.transfer.id))[:10]
+        if not edges:
+            return {
+                "answer": "No matching stored flow evidence was found for that reference." if requested else "No explicit flow-edge evidence is stored.",
+                "cited_tx_ids": [], "confidence": "Stored-record lookup",
+                "limitations": "A missing match does not establish that a transfer did not occur."
+            }
+        summaries = [
+            f"{edge.transfer.id}: {edge.source} → {edge.target}; {edge.evidence_reason}; source label {edge.label.value}"
+            for edge in edges
+        ]
+        return {
+            "answer": f"Stored flow evidence ({len(edges)} rows): {'; '.join(summaries)}.",
+            "cited_tx_ids": [edge.transfer.id for edge in edges],
+            "confidence": "Stored-record lookup",
+            "limitations": "The source label describes record corroboration, not proof of beneficial ownership or fund attribution."
+        }

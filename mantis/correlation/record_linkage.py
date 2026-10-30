@@ -2,6 +2,7 @@
 
 import math
 import re
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Tuple
 from dataclasses import dataclass, field
 from mantis.core.models import AssocEdge, LinkLabel
@@ -60,10 +61,13 @@ class FellegiSunterLinker:
             val_a = rec_a.get(rule.field_name)
             val_b = rec_b.get(rule.field_name)
 
-            if val_a is None or val_b is None:
+            if val_a is None or val_b is None or (isinstance(val_a, str) and not val_a.strip()) or (isinstance(val_b, str) and not val_b.strip()):
                 continue # Missing data does not penalize or reward
 
-            agrees, score, detail = self._evaluate_agreement(rule.field_name, val_a, val_b)
+            comparison = self._evaluate_agreement(rule.field_name, val_a, val_b)
+            if comparison is None:
+                continue # Malformed values are unknown, not counter-evidence.
+            agrees, score, detail = comparison
 
             if agrees:
                 w = rule.weight_agreement * score
@@ -98,16 +102,17 @@ class FellegiSunterLinker:
             "counter_evidence": counter_evidence
         }
 
-    def _evaluate_agreement(self, field_name: str, val_a: Any, val_b: Any) -> Tuple[bool, float, str]:
+    def _evaluate_agreement(self, field_name: str, val_a: Any, val_b: Any) -> Tuple[bool, float, str] | None:
         """Evaluates agreement between two field values."""
         str_a = str(val_a).strip().lower()
         str_b = str(val_b).strip().lower()
 
         if field_name == "account_number_suffix":
             # Match last 4 digits
-            digits_a = re.sub(r"\D", "", str_a)[-4:]
-            digits_b = re.sub(r"\D", "", str_b)[-4:]
-            if digits_a and digits_b and digits_a == digits_b:
+            full_a = re.sub(r"\D", "", str_a)
+            full_b = re.sub(r"\D", "", str_b)
+            digits_a, digits_b = full_a[-4:], full_b[-4:]
+            if len(full_a) >= 4 and len(full_b) >= 4 and digits_a == digits_b:
                 return True, 1.0, f"Matching last-4 digits: {digits_a}"
             return False, 0.0, "Account digits mismatch"
 
@@ -115,8 +120,8 @@ class FellegiSunterLinker:
             # Match last 10 digits
             p_a = re.sub(r"\D", "", str_a)[-10:]
             p_b = re.sub(r"\D", "", str_b)[-10:]
-            if p_a and p_b and p_a == p_b:
-                return True, 1.0, f"Exact 10-digit mobile match: {p_a}"
+            if len(re.sub(r"\D", "", str_a)) >= 10 and len(re.sub(r"\D", "", str_b)) >= 10 and p_a == p_b:
+                return True, 1.0, "Matching 10-digit phone suffix"
             return False, 0.0, "Mobile numbers differ"
 
         elif field_name == "vpa_handle":
@@ -129,11 +134,23 @@ class FellegiSunterLinker:
                 return True, 0.85, f"Shared username prefix across PSPs: {user_a}"
             return False, 0.0, "Distinct VPAs"
 
-        elif field_name == "name_jaro_winkler":
+        elif field_name in {"name_token_jaccard", "name_jaro_winkler"}:
             sim = self._token_jaccard(str_a, str_b)
             if sim >= 0.80:
-                return True, sim, f"High name similarity: {sim:.2f}"
+                return True, sim, f"Name token overlap: {sim:.2f}"
             return False, 0.0, f"Low name similarity: {sim:.2f}"
+
+        elif field_name == "time_proximity_window":
+            time_a = self._parse_aware_datetime(val_a)
+            time_b = self._parse_aware_datetime(val_b)
+            if time_a is None or time_b is None:
+                return None
+            delta_minutes = abs((time_a - time_b).total_seconds()) / 60.0
+            if delta_minutes <= 15.0:
+                # A transparent proximity taper for manual ranking, not a probability.
+                score = max(0.05, 1.0 - delta_minutes / 15.0)
+                return True, score, f"Timestamps within 15m ({delta_minutes:.1f}m apart)"
+            return False, 0.0, f"Timestamps differ by {delta_minutes:.1f}m (outside 15m window)"
 
         # Default string equality
         if str_a == str_b:
@@ -149,3 +166,14 @@ class FellegiSunterLinker:
         intersection = len(tokens1.intersection(tokens2))
         union = len(tokens1.union(tokens2))
         return intersection / union
+
+    @staticmethod
+    def _parse_aware_datetime(value: Any) -> datetime | None:
+        """Parse ISO timestamps only when their timezone is explicit."""
+        try:
+            parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            if parsed.tzinfo is None or parsed.utcoffset() is None:
+                return None
+            return parsed.astimezone(timezone.utc)
+        except (TypeError, ValueError, OverflowError):
+            return None

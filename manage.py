@@ -38,12 +38,33 @@ def main():
         import test_pipeline
         test_pipeline.run_e2e_pipeline()
 
+    elif cmd == "db-upgrade":
+        from alembic import command
+        from alembic.config import Config
+        from sqlalchemy import inspect
+        import mantis.db.models  # register current schema before bootstrapping
+        from mantis.db.session import DATABASE_URL, engine, init_db
+
+        # Bootstrap pre-Alembic workspaces, then record their schema as the
+        # baseline before applying forward migrations.
+        init_db()
+        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "alembic.ini"))
+        alembic_cfg.set_main_option(
+            "script_location", os.path.join(os.path.dirname(__file__), "alembic")
+        )
+        alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
+        if "alembic_version" not in inspect(engine).get_table_names():
+            command.stamp(alembic_cfg, "legacy_baseline")
+        command.upgrade(alembic_cfg, "head")
+        print("[SUCCESS] Database schema is at the latest migration revision.")
+
     else:
         print("""
 MANTIS CLI Commands:
   python manage.py run   - Launch web dashboard and REST API
   python manage.py seed  - Seed test data fixtures
   python manage.py test  - Run end-to-end scenario checks
+  python manage.py db-upgrade - Apply versioned database migrations
         """)
 
 if __name__ == "__main__":

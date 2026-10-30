@@ -1,0 +1,40 @@
+{
+  "transfers": [
+    {
+      "tx_hash": "0ae44532f7572fe6bae679a4a6640057239f57ccff9710106b7eed5f3f0c9939",
+      "event_index": 0,
+      "block_timestamp": 1793331480000,
+      "block_number": 100000001,
+      "from_address": "TYDzsYUEpvnYmQk4zGP9sWWcTEd2MiAtW6",
+      "to_address": "TNVaKWsmBsZ3rQf59ZpE57P1rYy2PZ8w7q",
+      "token_symbol": "USDT",
+      "amount_minor": 550000000,
+      "decimals": 6,
+      "demo_notice": "SYNTHETIC TEST DATA — not a real transaction or market quote"
+    },
+    {
+      "tx_hash": "a6e874c7a1373f62b3f8ed1137b903f3180aca656d6939d91b714de881094b1b",
+      "event_index": 0,
+      "block_timestamp": 1793331780000,
+      "block_number": 100000101,
+      "from_address": "TNVaKWsmBsZ3rQf59ZpE57P1rYy2PZ8w7q",
+      "to_address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+      "token_symbol": "USDT",
+      "amount_minor": 495000000,
+      "decimals": 6,
+      "demo_notice": "SYNTHETIC TEST DATA — not a real transaction"
+    },
+    {
+      "tx_hash": "c8ad46323690e35c85b7276de8912e8ee8f6137872724f46c5c1ff3295ea6251",
+      "event_index": 0,
+      "block_timestamp": 1793331780000,
+      "block_number": 100000101,
+      "from_address": "TNVaKWsmBsZ3rQf59ZpE57P1rYy2PZ8w7q",
+      "to_address": "TLyqzVGLV1srkB7dToTAwdg29TFVK97GMA",
+      "token_symbol": "USDT",
+      "amount_minor": 55000000,
+      "decimals": 6,
+      "demo_notice": "SYNTHETIC TEST DATA — not a real transaction"
+    }
+  ]
+}
